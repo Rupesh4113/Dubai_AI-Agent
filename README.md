@@ -43,9 +43,20 @@ $$\text{Observe} \to \text{Detect} \to \text{Investigate} \to \text{Diagnose} \t
 
 ---
 
-## Quick Start
+## Quick Start & Deployments
 
-### Option 1: Run Locally with Python & Node
+### Option 1: Deploy to Vercel (1-Click Recommended)
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new)
+
+1. Import this repository into your **[Vercel Dashboard](https://vercel.com)**.
+2. Vercel automatically detects `vercel.json` and builds the production React enterprise app.
+3. Your application is live instantly with the interactive Dubai map, 11-step competition player, and all 12 modules!
+4. See the full [Vercel Deployment Guide](docs/vercel_deployment.md).
+
+---
+
+### Option 2: Run Locally with Python & Node
 
 1. **Install Dependencies:**
    ```bash
