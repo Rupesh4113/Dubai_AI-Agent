@@ -1,17 +1,31 @@
 """
-CoolShield AI — Streamlit Enterprise Building Operations Application
+CoolShield AI — Streamlit Enterprise Cloud Application
 Dubai Smart Building Operations & Autonomous Efficiency Agent
+Optimized for Streamlit Community Cloud (GitHub Deployment).
 """
 import os
+import sys
+
+# Ensure repository root is on sys.path for Streamlit Cloud deployment
+REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 import json
 import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
-import pydeck as pdk
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+
+# Try importing pydeck with fallback for cloud environments
+try:
+    import pydeck as pdk
+    PYDECK_AVAILABLE = True
+except ImportError:
+    PYDECK_AVAILABLE = False
 
 # Import unified backend services, models, and agent tools
 from backend.app.models.db_models import (
@@ -45,11 +59,21 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Initialize Database Schema & Seed Data
-init_database()
-db = SessionLocal()
-seed_database_with_defaults(db, force_reset=False)
-run_anomaly_detection(db)
+
+# Cached database bootstrap for Streamlit Cloud deployment (runs only once per session)
+@st.cache_resource
+def bootstrap_database():
+    init_database()
+    db_session = SessionLocal()
+    try:
+        seed_database_with_defaults(db_session, force_reset=False)
+        run_anomaly_detection(db_session)
+    finally:
+        db_session.close()
+    return True
+
+
+bootstrap_database()
 
 # Session state initialization
 if "lang" not in st.session_state:
@@ -132,7 +156,7 @@ with st.sidebar:
 
     # 12 Navigation Pages
     nav_labels = {
-        "overview": get_translation(st.session_state.lang, "overview") if "overview" in TRANSLATIONS["en"] else "1. Executive Overview",
+        "overview": "1. Executive Overview",
         "portfolio": "2. Building Portfolio",
         "monitoring": "3. Live Monitoring",
         "insights": "4. AI Insights & Diagnostics",
@@ -172,6 +196,9 @@ st.markdown("""
     </div>
 </div>
 """, unsafe_allow_html=True)
+
+# Database Session for Page Execution
+db = SessionLocal()
 
 # Competition Demonstration Walkthrough Bar
 with st.expander("⚡ **Guided Competition Demonstration Walkthrough (Scenarios A, B, C, D)**", expanded=False):
@@ -217,8 +244,6 @@ if st.session_state.active_scenario_result:
     with d_col2:
         st.write("**Drafted Work Order:**", sc.get("work_order", {}).get("work_order_id"))
         st.write("**Potential Avoidable Cost:**", f"AED {sc.get('investigation_report', {}).get('financial_impact', {}).get('potential_avoidable_cost_24h_aed', 0):,.2f}")
-        if st.button("Proceed to Work Orders to Authorize & Verify", key="btn_goto_wo"):
-            page = "workorders"
 
 # -----------------------------------------------------------------------------
 # PAGE 1: EXECUTIVE OVERVIEW
@@ -244,7 +269,7 @@ if page == "overview":
     m3.metric("💧 Water Consumption (24h)", f"{water_today:,.1f} m³", f"AED {cost_water:,.2f}")
     m4.metric("💰 Verified Realized Savings", f"AED {total_verified_aed:,.0f}", "IPMVP Option B Verified")
 
-    # Interactive Dubai Map using PyDeck
+    # Interactive Dubai Map
     st.subheader("Interactive Dubai Building Portfolio Map")
     b_records = db.query(Building).all()
     map_data = pd.DataFrame([{
@@ -259,20 +284,26 @@ if page == "overview":
         "color": [220, 38, 38, 200] if "Critical" in b.operational_status else ([217, 119, 6, 200] if "Attention" in b.operational_status else [5, 150, 105, 200])
     } for b in b_records])
 
-    view_state = pdk.ViewState(latitude=25.14, longitude=55.22, zoom=10.5, pitch=35)
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        map_data,
-        get_position=["lon", "lat"],
-        get_color="color",
-        get_radius=850,
-        pickable=True
-    )
-    st.pydeck_chart(pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        tooltip={"text": "{name}\n📍 {district}\nType: {type}\nFloors: {floors} | GFA: {gfa} m²\nStatus: {status}"}
-    ))
+    if PYDECK_AVAILABLE:
+        try:
+            view_state = pdk.ViewState(latitude=25.14, longitude=55.22, zoom=10.5, pitch=35)
+            layer = pdk.Layer(
+                "ScatterplotLayer",
+                map_data,
+                get_position=["lon", "lat"],
+                get_color="color",
+                get_radius=850,
+                pickable=True
+            )
+            st.pydeck_chart(pdk.Deck(
+                layers=[layer],
+                initial_view_state=view_state,
+                tooltip={"text": "{name}\n📍 {district}\nType: {type}\nFloors: {floors} | GFA: {gfa} m²\nStatus: {status}"}
+            ))
+        except Exception:
+            st.map(map_data[["lat", "lon"]])
+    else:
+        st.map(map_data[["lat", "lon"]])
 
     # Two columns: Consumption trend & Recent alerts
     c1, c2 = st.columns([3, 2])
@@ -521,4 +552,14 @@ elif page == "settings":
     } for a in audits])
     st.dataframe(audit_data, use_container_width=True)
 
+    # Download audit report as CSV
+    csv_bytes = audit_data.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        "📥 Export Audit Ledger as CSV",
+        data=csv_bytes,
+        file_name="coolshield_dubai_audit_log.csv",
+        mime="text/csv"
+    )
+
+# Safely close session at the end of execution
 db.close()
