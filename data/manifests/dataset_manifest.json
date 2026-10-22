@@ -1,0 +1,80 @@
+{
+  "dataset_name": "CoolShield AI Synthetic Dubai Building Telemetry",
+  "version": "1.0.0",
+  "generated_at": "2026-10-22T16:26:56.795320+00:00",
+  "random_seed": 42,
+  "duration_days": 90,
+  "sample_interval": "1 hour",
+  "total_readings": 10800,
+  "buildings_count": 5,
+  "buildings": [
+    "DXB-OFF-01",
+    "DXB-HOT-02",
+    "DXB-RES-03",
+    "DXB-MIX-04",
+    "DXB-WHS-05"
+  ],
+  "ground_truth_anomalies": [
+    {
+      "scenario_key": "Scenario A",
+      "title": "HVAC Efficiency Degradation",
+      "building_id": "DXB-MIX-04",
+      "asset_id": "DXB-MIX-04-CH-02",
+      "metric": "cop_estimate",
+      "anomaly_type": "Chiller COP Degradation / Fouled Condenser",
+      "severity": "High",
+      "start_hour_offset": 1400,
+      "duration_hours": 96,
+      "multiplier": 0.65,
+      "description": "Gradual drop in Coefficient of Performance (COP) from 3.8 to 2.45 due to condenser coil scaling and dust accumulation, leading to 35% higher electric draw per ton of refrigeration.",
+      "expected_action": "Condenser coil chemical washing and refrigerant pressure check."
+    },
+    {
+      "scenario_key": "Scenario B",
+      "title": "Suspected Major Water Leak",
+      "building_id": "DXB-HOT-02",
+      "asset_id": "DXB-HOT-02-WTR-BOOST",
+      "metric": "water_m3",
+      "anomaly_type": "Abnormal Continuous Water Flow / Pipe Rupture",
+      "severity": "Critical",
+      "start_hour_offset": 1000,
+      "duration_hours": 36,
+      "multiplier": 4.8,
+      "description": "Uninterrupted nighttime water flow surge of ~4.8x normal baseline in the hotel spa basement piping loop, wasting ~28 m3 per day.",
+      "expected_action": "Emergency isolation of Spa Zone Valve B-04 and physical pipe inspection."
+    },
+    {
+      "scenario_key": "Scenario C",
+      "title": "Unexpected Overnight Energy Consumption",
+      "building_id": "DXB-OFF-01",
+      "asset_id": "DXB-OFF-01-AHU-04",
+      "metric": "electricity_kwh",
+      "anomaly_type": "After-Hours HVAC Schedule Override / Stuck Damper",
+      "severity": "High",
+      "start_hour_offset": 48,
+      "duration_hours": 24,
+      "multiplier": 2.1,
+      "description": "Commercial office VAV and AHU system running at 100% capacity between 11 PM and 5 AM during an un-cleared manual BMS override.",
+      "expected_action": "BMS schedule reset and damper actuator recalibration."
+    },
+    {
+      "scenario_key": "Scenario D",
+      "title": "Faulty Temperature Sensor & Data Gap",
+      "building_id": "DXB-RES-03",
+      "asset_id": "DXB-RES-03-TEMP-L28",
+      "metric": "indoor_temp_c",
+      "anomaly_type": "Sensor Drift & Intermittent Communication Packet Loss",
+      "severity": "Medium",
+      "start_hour_offset": 1720,
+      "duration_hours": 48,
+      "multiplier": 1.4,
+      "description": "Floor 28 Modbus temperature transmitter calibration drifting by +7.5\u00b0C with 42% missing packet telemetry, falsely triggering localized over-cooling.",
+      "expected_action": "Recalibrate or replace Modbus RTU temperature transmitter."
+    }
+  ],
+  "limitations": [
+    "Data is synthetically generated for simulation and competition demonstration only.",
+    "Weather profiles simulate typical Dubai climate conditions (22C to 48C) with seasonal drift.",
+    "Physical building control interfaces are disabled; all work orders require human operator approval."
+  ]
+}

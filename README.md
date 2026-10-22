@@ -1,152 +1,107 @@
-# CoolShield AI — Streamlit MVP
+# CoolShield AI
+## Dubai Smart Building Operations & Autonomous Efficiency Agent
 
-A Dubai-oriented building operations demo for anomaly detection, sensor ingestion, evidence-based recommendations, maintenance workflows, and six-language UI.
+[![Tests: Passing](https://img.shields.io/badge/tests-25%20passed-emerald)](./tests)
+[![Localization: 6 Languages](https://img.shields.io/badge/languages-EN%20%7C%20AR%20%7C%20HI%20%7C%20UR%20%7C%20ML%20%7C%20FIL-teal)](./backend/app/localization)
+[![RTL: Arabic Ready](https://img.shields.io/badge/RTL-Arabic%20Supported-blue)](./frontend)
+[![DEWA Tariffs: Active](https://img.shields.io/badge/tariffs-DEWA%20Tiered%20Slabs-amber)](./backend/app/services/tariff_service.py)
 
-**Important:** Bundled data is simulated. The MQTT broker configuration is for local development only and permits anonymous access. Do not expose it to the public internet. Physical building control is disabled.
+CoolShield AI is an autonomous building operations and efficiency agent designed for commercial office towers, luxury hotels, residential high-rises, and mixed-use retail developments in Dubai.
 
-## Stack
+It demonstrates a complete end-to-end closed-loop agentic workflow:
 
-- Streamlit UI
-- Python analytics and deterministic workflow logic
-- PostgreSQL (Docker Compose)
-- FastAPI REST ingestion endpoint
-- Optional MQTT adapter (Paho MQTT)
-- English, Arabic, Hindi, Urdu, Malayalam, Tagalog/Filipino UI
-- Docker Compose
+$$\text{Observe} \to \text{Detect} \to \text{Investigate} \to \text{Diagnose} \to \text{Prioritize} \to \text{Recommend} \to \text{Approve} \to \text{Execute} \to \text{Verify} \to \text{Learn}$$
 
-## Quick start with Docker
+> **Important Disclosure:** Telemetry data is simulated for demonstration and competition purposes. Physical building control (direct actuator or BMS write operations) is strictly disabled. Consequential maintenance dispatches require human authorization. CoolShield AI is an independent software application and is not officially endorsed by Dubai Municipality, DEWA, or any UAE government entity.
 
-1. Copy `.env.example` to `.env`.
-2. Change demo passwords and API keys for your environment.
-3. Build and start the app:
+---
+
+## Key Features
+
+1. **Interactive Dubai Portfolio Map:**
+   - Geocoded map of 5 major Dubai facilities (Downtown DIFC, Palm Jumeirah, Dubai Marina, City Walk, Dubai South) with live status markers and telemetry inspection.
+2. **Multi-Strategy Anomaly Detection:**
+   - Layer A: Data quality validation (flatlines, dropouts, physical bound checks).
+   - Layer B: Univariate Median Absolute Deviation (MAD), 168-hour seasonal profiles, and domain HVAC heuristics.
+3. **Evidence-Based Diagnostics & Calibrated Confidence:**
+   - Evaluates multi-sensor correlation across chilled water supply/return temperatures, VAV runtimes, and sub-meters.
+   - Calibrated confidence scoring ($0.0 - 1.0$) with ranked causes and safety instructions.
+4. **DEWA Tiered Tariff Engine:**
+   - Deterministic calculation of electricity costs using DEWA commercial slabs, fuel surcharge (~0.05 AED/kWh), water rates, sewerage fees, and 5% UAE VAT.
+   - Separates *potential modeled savings* from *verified realized savings*.
+5. **Human-in-the-Loop Approval & RBAC:**
+   - 8 user roles (Facilities Manager, Property Owner, HVAC Technician, Sustainability Manager, Finance Analyst, Auditor, etc.) enforced on backend API endpoints.
+   - Mandatory human approval gate before work orders are dispatched.
+6. **Post-Intervention Verification (IPMVP Option B):**
+   - Automatically compares post-repair telemetry against the weather-adjusted baseline and records verified AED savings in an immutable audit ledger.
+7. **6-Language Localization Engine with Full Arabic RTL:**
+   - English (`en`), Arabic (`ar` with full right-to-left layout and mirrored navigation), Hindi (`hi`), Urdu (`ur`), Malayalam (`ml`), and Tagalog / Filipino (`fil`).
+8. **Customer Validation Framework (Section 13):**
+   - Built-in pilot agreement tracker and interview guide for Dubai real estate operators.
+9. **Guided Competition Demonstration Player (Section 14):**
+   - 11-step interactive walkthrough for Scenarios A, B, C, and D with one-click database reset.
+
+---
+
+## Quick Start
+
+### Option 1: Run Locally with Python & Node
+
+1. **Install Dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   cd frontend
+   npm install
+   npm run build
+   cd ..
+   ```
+
+2. **Run Unified Production Server:**
+   ```bash
+   python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
+   ```
+
+3. **Open the Application:**
+   - **Enterprise Web UI & Interactive Dubai Map:** [http://localhost:8000](http://localhost:8000)
+   - **Interactive OpenAPI Documentation:** [http://localhost:8000/docs](http://localhost:8000/docs)
+   - **API Health Check:** [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
+
+---
+
+### Option 2: Docker Compose
 
 ```bash
 docker compose up --build
 ```
+Open [http://localhost:8000](http://localhost:8000).
 
-4. Open:
-   - Streamlit: http://localhost:8501
-   - Ingestion API docs: http://localhost:8000/docs
-   - Health: http://localhost:8000/health
+---
 
-The Streamlit app seeds synthetic readings on first launch.
+## Automated Test Suite
 
-## Enable MQTT worker
+Run all 25 unit and integration tests:
 
 ```bash
-docker compose --profile iot up --build
+python -m pytest tests/ -v
 ```
 
-Publish a JSON message to topic `coolshield/readings` with fields such as:
+Verified test coverage includes:
+- Data quality validation (Layer A)
+- DEWA slab tariffs and financial impact arithmetic
+- Granular Role-Based Access Control (RBAC) permissions
+- Autonomous agent tools and closed-loop lifecycle
+- FastAPI REST endpoints and static React frontend mounting
 
-```json
-{
-  "timestamp": "2026-10-22T10:00:00Z",
-  "building_id": "DXB-OFF-01",
-  "building_type": "Office Tower",
-  "asset_id": "DXB-OFF-01-HVAC-01",
-  "electricity_kwh": 21.4,
-  "water_m3": 0.31,
-  "indoor_temp_c": 23.8,
-  "outdoor_temp_c": 36.1,
-  "hvac_runtime_hours": 0.9,
-  "occupancy_estimate": 0.7
-}
-```
+---
 
-The example broker is unauthenticated for local development only. Configure broker authentication, TLS, ACLs, network isolation, and secrets before any shared or production environment.
+## Documentation Index
 
-## Send a sensor reading to the REST API
-
-Use the API key configured in `.env`:
-
-```bash
-curl -X POST http://localhost:8000/v1/readings \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: local-demo-key-change-me" \
-  -d '{
-    "timestamp":"2026-10-22T10:00:00Z",
-    "building_id":"DXB-OFF-01",
-    "asset_id":"DXB-OFF-01-HVAC-01",
-    "electricity_kwh":21.4,
-    "water_m3":0.31,
-    "indoor_temp_c":23.8,
-    "outdoor_temp_c":36.1,
-    "hvac_runtime_hours":0.9,
-    "occupancy_estimate":0.7,
-    "building_type":"Office Tower"
-  }'
-```
-
-## CSV import schema
-
-Required columns:
-
-- `timestamp`
-- `building_id`
-- `asset_id`
-- `electricity_kwh`
-- `water_m3`
-- `indoor_temp_c`
-- `outdoor_temp_c`
-- `hvac_runtime_hours`
-
-Optional: `building_type`, `occupancy_estimate`.
-
-Timestamps are normalized to UTC on ingestion. The UI timezone can be localized in a later enhancement; operational records should retain unambiguous timestamps.
-
-## Local Python setup without Docker
-
-Python 3.12 is recommended.
-
-```bash
-python -m venv .venv
-# Windows PowerShell:
-.venv\Scripts\Activate.ps1
-# macOS/Linux:
-source .venv/bin/activate
-
-pip install -r requirements.txt
-copy .env.example .env
-streamlit run app.py
-```
-
-For a local non-Docker run, set `DATABASE_URL=sqlite:///./coolshield.db` in `.env`. Run the API separately using `uvicorn api:app --reload --port 8000`.
-
-## Six languages
-
-The selector includes English (`en`), Arabic (`ar`), Hindi (`hi`), Urdu (`ur`), Malayalam (`ml`), and Filipino/Tagalog (`fil`). Arabic has a basic RTL layout treatment. This starter translates core navigation and primary UI labels; production readiness requires translation coverage tests for every page, form, notification, validation message, chart label, and generated report, plus native-speaker review.
-
-## MVP limitations to address before a customer pilot
-
-1. Demo anomaly detector is intentionally simple; evaluate against labeled test windows and tune false alarms.
-2. The resolution verification function deliberately does not mark savings as verified without real before/after evidence.
-3. Authentication and fine-grained authorization are not yet implemented.
-4. Add tenant isolation, production secrets, TLS, MQTT authentication/ACLs, rate limits, and stronger API validation before external exposure.
-5. Add durable idempotency, deduplication, retry handling, and dead-letter processing for ingestion.
-6. Add explicit tariff models, weather/occupancy-adjusted baselines, and audited savings calculations.
-7. Add customer interviews and a consented pilot; do not invent customer validation.
-8. Keep all physical controls disabled until safety engineering and customer authorization are complete.
-
-## Project tree
-
-```text
-coolshield-ai-mvp/
-├── app.py
-├── api.py
-├── mqtt_worker.py
-├── coolshield/
-│   ├── __init__.py
-│   ├── analytics.py
-│   ├── db.py
-│   ├── i18n.py
-│   └── workflow.py
-├── mosquitto/
-│   └── mosquitto.conf
-├── tests/
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── .env.example
-└── README.md
-```
+- [System Architecture & Data-Flow Diagrams](docs/architecture.md)
+- [Prospective Customer Validation & Pilot Plan](docs/customer_pilot.md)
+- [Data Dictionary & Schema Specification](docs/data_dictionary.md)
+- [REST API Integration Guide](docs/api_guide.md)
+- [Security Architecture & Governance](docs/security.md)
+- [Known Limitations & Risk Register](docs/limitations.md)
+- [Anomaly Detection Validation Report](docs/validation_report.md)
+- [Competition Demonstration Script](docs/demo_script.md)
+- [Commercial & Technical Roadmap](docs/roadmap.md)
