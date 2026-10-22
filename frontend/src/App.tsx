@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { ApiClient } from './api/client';
 import type {
   ExecutiveKPIs,
@@ -1061,6 +1062,7 @@ export const App: React.FC = () => {
           )}
         </main>
       </div>
+      <Analytics />
     </div>
   );
 };
