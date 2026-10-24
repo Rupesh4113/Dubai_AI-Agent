@@ -1,0 +1,167 @@
+{
+  "name": "CoolShield AI - 09 Autonomous Workflow Health & Dead-Letter Watchdog",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Schedule - Every 5 Min Watchdog",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Query Workflow Health Logs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/workflows/status"
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "Dead-Letter & Failure Audit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const logs = $json.workflows || [];\nconst degraded = logs.filter(l => l.execution_status === 'FAILED' || l.latency_ms > 2000);\nreturn [{\n  json: {\n    total_checked: logs.length,\n    healthy: degraded.length === 0,\n    degraded_count: degraded.length,\n    degraded_items: degraded\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "IF - Health Degraded",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.healthy }}",
+              "operation": "equals",
+              "value2": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Dispatch Watchdog Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/09_workflow_health",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ alert: 'Workflow Watchdog Alert', details: $json }) }}"
+      }
+    },
+    {
+      "id": "node-6",
+      "name": "Log All Workflows Normal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        380
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/09_workflow_health",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ status: 'HEALTHY_CONFIRMED' }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - Every 5 Min Watchdog": {
+      "main": [
+        [
+          {
+            "node": "Query Workflow Health Logs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Workflow Health Logs": {
+      "main": [
+        [
+          {
+            "node": "Dead-Letter & Failure Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dead-Letter & Failure Audit": {
+      "main": [
+        [
+          {
+            "node": "IF - Health Degraded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Health Degraded": {
+      "main": [
+        [
+          {
+            "node": "Dispatch Watchdog Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log All Workflows Normal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}

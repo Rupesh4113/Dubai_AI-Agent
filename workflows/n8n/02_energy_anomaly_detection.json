@@ -1,0 +1,139 @@
+{
+  "name": "CoolShield AI - 02 Energy & Water Anomaly Detection Engine",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Schedule - Every 15 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Fetch Anomaly Predictions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/anomalies"
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "Filter Critical & High Incidents",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst highPriority = items.filter(i => i.json.severity === 'Critical' || i.json.severity === 'High');\nreturn highPriority;"
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "Autonomous Diagnostic Investigation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/agent/investigate",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ event_id: $json.event_id }) }}"
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Log Execution Health",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/02_energy_anomaly_detection",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ status: 'SUCCESS', evaluated_count: $input.all().length }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - Every 15 Min": {
+      "main": [
+        [
+          {
+            "node": "Fetch Anomaly Predictions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Anomaly Predictions": {
+      "main": [
+        [
+          {
+            "node": "Filter Critical & High Incidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Critical & High Incidents": {
+      "main": [
+        [
+          {
+            "node": "Autonomous Diagnostic Investigation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autonomous Diagnostic Investigation": {
+      "main": [
+        [
+          {
+            "node": "Log Execution Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}

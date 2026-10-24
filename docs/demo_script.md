@@ -1,36 +1,93 @@
-# CoolShield AI — Competition Demonstration Script
+# CoolShield AI — 14-Step Societal AI Agent Demonstration Script
+## Autonomous Societal AI Agent for Sustainable Buildings & Resilient Communities
 
-**Estimated Presentation Duration:** 5–7 Minutes  
-**Target Audience:** Judges, Real Estate Developers, Facilities Management Directors  
-
----
-
-## 1. Introduction (1 Minute)
-> "Good morning / afternoon, esteemed judges. Commercial buildings and luxury towers across Dubai consume over 70% of the emirate's electrical grid, with chilled water systems and water booster pumps representing the largest operational expense. When an equipment degradation or pipe leak occurs, property managers often only find out weeks later when the monthly DEWA utility bill arrives with steep slab surcharges.
->
-> Today, we present **CoolShield AI** — an autonomous building operations and efficiency agent designed specifically for Dubai's commercial and hospitality property sector."
+**Estimated Presentation Duration:** 8–10 Minutes  
+**Target Audience:** Competition Judges, Commercial Asset Operators, ESG Directors, Community Leaders  
+**Market:** Dubai & United Arab Emirates  
 
 ---
 
-## 2. Interactive Dubai Portfolio Map & Executive Overview (1.5 Minutes)
-1. **Open Application UI:** Point out the top header with the language selector and role switcher.
-2. **Switch to Arabic:** Toggle to **العربية** to showcase native RTL layout, typography, and mirrored navigation.
-3. **Show Executive KPIs:** Show total buildings monitored (5 properties), electricity (kWh), water ($m^3$), estimated operating cost in AED via the DEWA tariff engine, and verified savings.
-4. **Interactive Map:** Show the 5 building markers across Dubai (Downtown DIFC, Palm Jumeirah, Dubai Marina, City Walk, and Dubai South). Click **Palm Oasis Resort (DXB-HOT-02)** to demonstrate live building selection.
+### Step 1: Executive Impact Overview & Connected Dubai Map
+- **Action:** Open Section 1: *Executive Impact Overview*.
+- **Narrative:** "CoolShield AI is an autonomous Societal AI Agent operating across Dubai commercial towers and community infrastructure. We monitor 5 live facilities, track 24h electricity and water consumption, compute real-time operating costs in AED under DEWA commercial tariffs, and display verified IPMVP Option B savings alongside avoided carbon emissions."
+- **Visuals:** Top KPI cards, interactive PyDeck Dubai map with facility pins (Burj Al-Amal, Palm Oasis, Marina Bay, Al-Wasl, Dubai South), and 14-day consumption trends.
 
 ---
 
-## 3. Autonomous 11-Step Closed-Loop Demonstration (3 Minutes)
-1. In the **Competition Demonstration Mode** bar at the top, click **Scenario B: Suspected Water Leak (Palm Oasis Resort)**.
-2. **Step 1 (Detect & Investigate):** The modal opens showing the anomaly event: water flow at 4.8x baseline during 3 AM low-occupancy hours.
-3. **Step 2 (Evidence & Diagnostics):** Show the ranked root causes with calibrated confidence (90%) and calculated DEWA avoidable cost impact (AED 1,840/day).
-4. **Step 3 (Human Approval Gate):** Explain that physical control is strictly safe-guarded. Show the Facilities Manager sign-off button: click **Authorize & Dispatch Work Order**.
-5. **Step 4 (Field Technician Execution):** Work order transitions to `Assigned` to technician Tariq Mansoor. Click **Simulate Field Completion**.
-6. **Step 5 (Autonomous Verification):** Click **Verify Telemetry & Confirm Realized Savings**. Show the agent evaluating post-intervention readings against the weather-adjusted IPMVP Option B baseline model and recording **AED 3,360 weekly verified savings** in the audit ledger.
+### Step 2: Six-Language Selector & Full Arabic RTL Interface
+- **Action:** In the sidebar, toggle **🌐 Language** from English to **العربية (Arabic)**, and highlight available options: **हिन्दी (Hindi)**, **اردو (Urdu)**, **മലയാളം (Malayalam)**, and **Filipino**.
+- **Narrative:** "Dubai's society is vibrant and multilingual. CoolShield AI provides native right-to-left layout and typography for Arabic, while offering seamless access across the top 6 community languages spoken by property operators, technicians, and residents."
 
 ---
 
-## 4. Customer Validation & Conclusion (1 Minute)
-1. Navigate to **Customer Pilots (Section 13)**: show the structured interview record and 30-day proof-of-concept agreement framework with Dubai asset managers.
-2. Navigate to **Settings & Audit Log**: show the complete immutable audit trail of the demonstration actions.
-3. Conclude: *"CoolShield AI turns reactive maintenance into autonomous, explainable, and verifiable savings for Dubai smart cities."*
+### Step 3: Live Sensor Telemetry & Layer A Data Quality Gate
+- **Action:** Navigate to Section 2: *Live Sensor Telemetry*. Select `DXB-OFF-01` (Burj Al-Amal).
+- **Narrative:** "Before any reasoning occurs, the agent executes Layer A Data Quality Validation. Notice the 4 quality indicators: 0.0% missingness, sensor flatline variance checks, and strict physical range bounds. Telemetry cannot feed downstream models without passing this gate."
+
+---
+
+### Step 4: Multi-Layer Anomaly Detection (Layer B & Statistical Modeling)
+- **Action:** Highlight the Anomaly Detection Engine running Median Absolute Deviation (MAD), diurnal baselines, and physical rule interlocks.
+- **Narrative:** "The agent monitors continuous sub-meter streams. When nighttime water flow or chiller COP deviates from historical seasonal baselines, an anomaly event record is generated with cryptographic deduplication."
+
+---
+
+### Step 5: Autonomous AI Investigation & Calibrated Confidence Dossier
+- **Action:** In the guided walkthrough bar, click **Scenario B: Suspected Water Leak (Palm Oasis Resort)**.
+- **Narrative:** "The agent doesn't guess. It correlates domestic booster pump telemetry, night-time dormant flow, and asset service history. It yields a calibrated confidence score (90%) and ranks probable causes with supporting evidence."
+
+---
+
+### Step 6: DEWA Tiered Tariff Engine & Financial Loss Estimation
+- **Action:** Review the avoidable cost calculation card.
+- **Narrative:** "Under official DEWA commercial tariffs, water is billed progressively with sewerage charges. A concealed 1 L/min leak costs over AED 650/month, and severe booster line ruptures exceed AED 1,840/day. The agent quantifies financial urgency in UAE Dirhams."
+
+---
+
+### Step 7: Peak Demand Load Shifting & Pre-Cooling Optimization (Module B)
+- **Action:** Navigate to Section 3: *Peak Demand & HVAC Optimization*.
+- **Narrative:** "During the DEWA 12:00 PM – 6:00 PM peak window, grid strain is highest. The agent calculates a thermal pre-cooling schedule—cooling mass to 22.5°C before 11:30 AM, then drifting setpoints up to shed 133 kW of peak demand (saving AED 495/day) without human discomfort."
+
+---
+
+### Step 8: Indoor Thermal Comfort & Air Quality Safety Interlocks (ASHRAE 55 & 62.1)
+- **Action:** Navigate to Section 5: *Indoor Comfort & Safety Bounds*.
+- **Narrative:** "Energy efficiency never compromises human well-being. Our non-negotiable safety interlocks enforce ASHRAE Standard 55 (23.0°C–26.0°C), ASHRAE 62.1 fresh air ventilation (15 CFM/person), CO₂ ceilings (<800 ppm), and district cooling low Delta-T protection (≥5.0°C). Any boundary breach automatically halts load shedding."
+
+---
+
+### Step 9: Human Approval Centre & Server-Side Security Gate
+- **Action:** Navigate to Section 10: *Human Approval Centre*. Show the pending work order and load shedding plan.
+- **Narrative:** "CoolShield AI enforces strict human-in-the-loop governance. Consequential physical interventions cannot be dispatched autonomously. A certified Facilities Manager must record an approval rationale. Watch the RBAC gate: read-only roles are blocked from approving." Click **Authorize & Dispatch Technician**.
+
+---
+
+### Step 10: Field Technician Execution & Mobile Work Order Dispatch
+- **Action:** Switch role to *HVAC Technician*.
+- **Narrative:** "The work order is dispatched to mobile technician Tariq Mansoor with safety instructions (electrical LOTO, pressure relief). The technician executes the physical repair and enters on-site notes." Click **Simulate Field Technician Completion**.
+
+---
+
+### Step 11: Autonomous Verification & Realized Savings (IPMVP Option B)
+- **Action:** Click **Verify Resolution & Realized Savings**.
+- **Narrative:** "The agent verifies post-action telemetry against weather-normalized baseline models. Once consumption normalizes within ±2%, it confirms **AED 3,360 weekly realized savings** and logs an immutable audit event."
+
+---
+
+### Step 12: Social Inclusion & Multilingual Resident Routing (Module C)
+- **Action:** Navigate to Section 6: *Social Inclusion & Community Hub*.
+- **Narrative:** "Buildings exist within communities. Our interactive map displays verified Dubai cooling shelters, customer happiness centres, and clinics with wheelchair accessibility. Submit a resident ticket: notice how phone numbers and email addresses are automatically sanitized using regex to preserve occupant privacy."
+
+---
+
+### Step 13: Community Resilience & NCM Early Warning (Module E)
+- **Action:** Navigate to Section 8: *Resilience & Early Warning*.
+- **Narrative:** "Integrated with the UAE National Center of Meteorology (NCM), the system calculates the real-time Heat Index (43.8°C alert) and outdoor PM2.5 AQI. When extreme heat triggers an alert, the agent automatically dispatches localized cooling shelter routes to outdoor maintenance crews and vulnerable residents."
+
+---
+
+### Step 14: Corporate ESG Accounting (Scope 1 & 2) & n8n Automation Engine
+- **Action:** Navigate to Section 4 (*Carbon & ESG Intelligence*) and Section 11 (*n8n Automation Engine*).
+- **Narrative:** "Under GHG Protocol, Scope 1 direct fuels and Scope 2 DEWA grid emissions (0.42 kg CO₂e/kWh) are quantified transparently. Verified operational reductions (7.45 MT) are kept strictly separate from registered carbon offsets (DCCE-UAE-2026-8819A). Finally, all 9 autonomous workflows execute seamlessly on our self-hosted n8n engine."
+- **Deliverables:** Show one-click download of the Official ESG JSON Report and Tamper-Evident Audit CSV.
+- **Conclusion:** *"CoolShield AI connects commercial building efficiency with societal resilience—turning smart facilities into sustainable communities across Dubai."*

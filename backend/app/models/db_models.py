@@ -295,6 +295,173 @@ class CustomerInterviewRecord(Base):
     status = Column(String(32), default="Pilot Proposed")
 
 
+# ---------------------------------------------------------
+# Module B: Peak Demand & HVAC Optimization
+# ---------------------------------------------------------
+class OptimizationPlan(Base):
+    __tablename__ = "optimization_plans"
+    plan_id = Column(String(64), primary_key=True, default=lambda: f"opt_{uuid.uuid4().hex[:8]}")
+    building_id = Column(String(32), ForeignKey("buildings.id"), nullable=False, index=True)
+    trigger_reason = Column(String(128), nullable=False)  # DEWA Peak Tariff, Grid Demand Response, High Load
+    eligible_loads_json = Column(Text, nullable=False)  # Non-critical setpoints and loads
+    safety_constraints_json = Column(Text, nullable=False)  # Min/Max temperature bounds, ventilation CFM
+    estimated_demand_reduction_kw = Column(Float, default=0.0)
+    estimated_cost_avoided_aed = Column(Float, default=0.0)
+    approval_status = Column(String(32), default="Pending")  # Pending, Approved, Rejected, Expired
+    approved_by = Column(String(128), nullable=True)
+    execution_status = Column(String(32), default="Draft")  # Draft, Simulating, Executed, Verified, Aborted
+    baseline_kw = Column(Float, default=0.0)
+    actual_kw = Column(Float, default=0.0)
+    verified_savings_kw = Column(Float, default=0.0)
+    safety_breach_detected = Column(Boolean, default=False)
+    created_at = Column(String(64), default=utcnow_str)
+    expires_at = Column(String(64), default=utcnow_str)
+
+
+# ---------------------------------------------------------
+# Module C: Social Inclusion & Community Services
+# ---------------------------------------------------------
+class CommunityResource(Base):
+    __tablename__ = "community_resources"
+    id = Column(String(64), primary_key=True)  # e.g., res_cooling_albarsha_01
+    name = Column(String(128), nullable=False)
+    category = Column(String(64), nullable=False)  # Cooling Shelter, Happiness Centre, Health Clinic, Library, Recycling Hub
+    district = Column(String(64), nullable=False)
+    address = Column(String(256), nullable=False)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    opening_hours = Column(String(128), default="08:00 - 22:00")
+    contact_phone = Column(String(32), default="+971-4-800-900")
+    services_offered_json = Column(Text, default="[]")
+    is_verified = Column(Boolean, default=True)
+    wheelchair_accessible = Column(Boolean, default=True)
+    max_capacity = Column(Integer, default=150)
+    current_availability = Column(String(32), default="Open")  # Open, Crowded, Closed
+
+
+class CommunityServiceRequest(Base):
+    __tablename__ = "community_service_requests"
+    request_id = Column(String(64), primary_key=True, default=lambda: f"req_{uuid.uuid4().hex[:8]}")
+    building_id = Column(String(32), nullable=True)
+    category = Column(String(64), nullable=False)  # Thermal Comfort, Accessibility Issue, Water/Air Quality, Recycling
+    description = Column(Text, nullable=False)  # PII-minimized
+    language = Column(String(10), default="en")
+    resident_alias = Column(String(64), default="Resident (Anonymous)")
+    priority = Column(String(32), default="Routine")  # Routine, Urgent, Emergency
+    status = Column(String(32), default="Received")  # Received, Acknowledged, Assigned, In Progress, Resolved, Closed
+    assigned_team = Column(String(64), default="Community Operations")
+    response_summary = Column(Text, nullable=True)
+    resolution_notes = Column(Text, nullable=True)
+    created_at = Column(String(64), default=utcnow_str)
+    resolved_at = Column(String(64), nullable=True)
+
+
+# ---------------------------------------------------------
+# Module D: Sustainability Education & Participation
+# ---------------------------------------------------------
+class SustainabilityChallenge(Base):
+    __tablename__ = "sustainability_challenges"
+    id = Column(String(64), primary_key=True)  # e.g., ch_2026_w43
+    title = Column(String(160), nullable=False)
+    category = Column(String(64), nullable=False)  # Energy Conservation, Water Stewardship, Zero Waste
+    description = Column(Text, nullable=False)
+    target_metric = Column(String(128), nullable=False)
+    duration_days = Column(Integer, default=7)
+    total_participants = Column(Integer, default=0)
+    aggregate_savings_kwh_or_m3 = Column(Float, default=0.0)
+    status = Column(String(32), default="Active")  # Active, Completed, Upcoming
+    start_date = Column(String(32), default="2026-10-20")
+    end_date = Column(String(32), default="2026-10-27")
+
+
+class ChallengeParticipation(Base):
+    __tablename__ = "challenge_participations"
+    id = Column(String(64), primary_key=True, default=lambda: f"part_{uuid.uuid4().hex[:8]}")
+    challenge_id = Column(String(64), ForeignKey("sustainability_challenges.id"), nullable=False)
+    participant_alias = Column(String(64), nullable=False)
+    building_id = Column(String(32), nullable=False)
+    opt_in_date = Column(String(64), default=utcnow_str)
+    status = Column(String(32), default="Pledged")  # Pledged, Completed, Verified
+    points_earned = Column(Integer, default=100)
+
+
+class EducationalContent(Base):
+    __tablename__ = "educational_content"
+    id = Column(String(64), primary_key=True, default=lambda: f"edu_{uuid.uuid4().hex[:8]}")
+    title = Column(String(160), nullable=False)
+    topic = Column(String(64), nullable=False)
+    target_audience = Column(String(64), default="Residents & Tenants")
+    content_en = Column(Text, nullable=False)
+    content_ar = Column(Text, nullable=False)
+    content_hi = Column(Text, nullable=True)
+    content_ur = Column(Text, nullable=True)
+    content_ml = Column(Text, nullable=True)
+    content_fil = Column(Text, nullable=True)
+    key_takeaway = Column(String(256), nullable=False)
+    is_approved = Column(Boolean, default=True)
+    created_at = Column(String(64), default=utcnow_str)
+
+
+# ---------------------------------------------------------
+# Module E: Community Resilience & Early Warning
+# ---------------------------------------------------------
+class ResilienceIncident(Base):
+    __tablename__ = "resilience_incidents"
+    incident_id = Column(String(64), primary_key=True, default=lambda: f"res_{uuid.uuid4().hex[:8]}")
+    building_id = Column(String(32), default="EMIRATE_WIDE")
+    incident_type = Column(String(64), nullable=False)  # Extreme Heat Wave, Outdoor AQI Spike, Chilled Water Outage
+    severity = Column(String(32), default="Advisory")  # Normal, Advisory, Alert, Emergency
+    heat_index_c = Column(Float, default=38.0)
+    aqi_pm25 = Column(Float, default=85.0)
+    description = Column(Text, nullable=False)
+    recommended_action = Column(Text, nullable=False)
+    recommended_shelter_id = Column(String(64), nullable=True)
+    data_freshness_minutes = Column(Integer, default=5)
+    is_confirmed = Column(Boolean, default=True)  # True = Telemetry Confirmed, False = Predictive Warning
+    status = Column(String(32), default="Active")  # Active, Mitigating, Resolved
+    created_at = Column(String(64), default=utcnow_str)
+    updated_at = Column(String(64), default=utcnow_str)
+
+
+# ---------------------------------------------------------
+# ESG & Sustainability Accounting (Scope 1 & 2)
+# ---------------------------------------------------------
+class ESGReportRecord(Base):
+    __tablename__ = "esg_report_records"
+    report_id = Column(String(64), primary_key=True, default=lambda: f"esg_{uuid.uuid4().hex[:8]}")
+    building_id = Column(String(32), default="PORTFOLIO")
+    period_label = Column(String(64), default="2026-Q3")
+    period_start = Column(String(32), default="2026-07-01")
+    period_end = Column(String(32), default="2026-09-30")
+    scope1_emissions_kgco2e = Column(Float, default=1240.0)  # On-site generator diesel / gas
+    scope2_emissions_kgco2e = Column(Float, default=48200.0)  # DEWA grid electricity (0.42 kg/kWh)
+    total_emissions_mtco2e = Column(Float, default=49.44)
+    emissions_reduction_mtco2e = Column(Float, default=6.85)  # Realized operational reduction
+    offsets_purchased_mtco2e = Column(Float, default=5.0)  # Carbon offsets strictly kept separate
+    offset_registry_provider = Column(String(128), default="Dubai Carbon Centre of Excellence (DCCE)")
+    offset_serial_numbers = Column(String(128), default="DCCE-UAE-2026-8819A")
+    data_completeness_pct = Column(Float, default=98.8)
+    methodology_standard = Column(String(128), default="GHG Protocol Corporate Standard / GRI 302-305")
+    auditor_review_status = Column(String(64), default="Pending Expert Review")
+    generated_at = Column(String(64), default=utcnow_str)
+
+
+# ---------------------------------------------------------
+# n8n Workflow Automation Health & Executions
+# ---------------------------------------------------------
+class WorkflowExecutionLog(Base):
+    __tablename__ = "workflow_execution_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    workflow_id = Column(String(64), nullable=False, index=True)  # 01_sensor_ingestion, 02_anomaly_detection, etc.
+    workflow_name = Column(String(128), nullable=False)
+    trigger_type = Column(String(32), default="Webhook")  # Webhook, Schedule, Manual
+    execution_status = Column(String(32), default="SUCCESS")  # SUCCESS, FAILED, RUNNING, WAITING_APPROVAL
+    latency_ms = Column(Integer, default=120)
+    error_message = Column(Text, nullable=True)
+    payload_summary = Column(Text, nullable=True)
+    timestamp = Column(String(64), default=utcnow_str)
+
+
 def init_database():
     """Create all tables in the database."""
     Base.metadata.create_all(bind=engine)

@@ -1,0 +1,151 @@
+{
+  "name": "CoolShield AI - 06 NCM Weather & Heat Resilience Early Warning",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Schedule - Every 10 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Fetch NCM Weather & Heat Index",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/resilience/weather-risk"
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "IF - Extreme Heat or AQI Alert",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.calculated_heat_index_c }}",
+              "operation": "largerEqual",
+              "value2": 42.0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "Activate Cooling Shelter Routing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        240
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/community/resources?category=Cooling+Shelter"
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Log Resilience Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/06_resilience_monitoring",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ status: 'SUCCESS', heat_index: $json.calculated_heat_index_c }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - Every 10 Min": {
+      "main": [
+        [
+          {
+            "node": "Fetch NCM Weather & Heat Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch NCM Weather & Heat Index": {
+      "main": [
+        [
+          {
+            "node": "IF - Extreme Heat or AQI Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Extreme Heat or AQI Alert": {
+      "main": [
+        [
+          {
+            "node": "Activate Cooling Shelter Routing",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Resilience Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Activate Cooling Shelter Routing": {
+      "main": [
+        [
+          {
+            "node": "Log Resilience Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}

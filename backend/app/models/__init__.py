@@ -3,5 +3,9 @@ from backend.app.models.db_models import (
     User, Building, BuildingAsset, SensorReading,
     AnomalyEvent, AIInvestigation, Recommendation,
     WorkOrder, ApprovalRecord, VerificationResult,
-    UtilityTariff, AuditEvent, IntegrationConnection, CustomerInterviewRecord
+    UtilityTariff, AuditEvent, IntegrationConnection, CustomerInterviewRecord,
+    OptimizationPlan, CommunityResource, CommunityServiceRequest,
+    SustainabilityChallenge, ChallengeParticipation, EducationalContent,
+    ResilienceIncident, ESGReportRecord, WorkflowExecutionLog
 )
+

@@ -5,7 +5,7 @@ DEWA Utility Tariffs, RBAC Security, and Static Frontend SPA Mounting.
 """
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -24,8 +24,9 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed_database_with_defaults(db, force_reset=False)
-        # Pre-populate detected anomalies
-        run_anomaly_detection(db)
+        from backend.app.models.db_models import AnomalyEvent
+        if db.query(AnomalyEvent).count() == 0:
+            run_anomaly_detection(db)
     finally:
         db.close()
     yield
@@ -56,15 +57,24 @@ frontend_dist = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 if os.path.exists(frontend_dist):
     app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist, "assets")), name="assets")
 
+    @app.get("/")
+    async def serve_root():
+        index_file = os.path.join(frontend_dist, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+        return {"service": "CoolShield AI", "status": "operational"}
+
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        # Allow API docs and endpoints to be served normally
-        if full_path.startswith("api/") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
-            return None
+        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            raise HTTPException(status_code=404, detail="Not Found")
         file_path = os.path.join(frontend_dist, full_path)
         if os.path.exists(file_path) and os.path.isfile(file_path):
             return FileResponse(file_path)
-        return FileResponse(os.path.join(frontend_dist, "index.html"))
+        index_file = os.path.join(frontend_dist, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+        raise HTTPException(status_code=404, detail="File Not Found")
 
 
 if __name__ == "__main__":

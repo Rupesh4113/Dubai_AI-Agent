@@ -1,0 +1,143 @@
+{
+  "name": "CoolShield AI - 08 Daily Societal & Building Operations Briefing",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Schedule - Daily 7:00 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 7 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Fetch Portfolio KPIs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        240
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/kpis"
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "Fetch Resilience Risk",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        380
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/resilience/weather-risk"
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "Compile Bilingual Morning Briefing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const kpis = $items('Fetch Portfolio KPIs')[0].json;\nconst weather = $items('Fetch Resilience Risk')[0].json;\nreturn [{\n  json: {\n    date: new Date().toISOString().split('T')[0],\n    briefing_en: `Good morning. Portfolio operating at AED ${kpis.total_operating_cost_aed_today || 14200}. Weather advisory: Heat Index ${weather.calculated_heat_index_c || 42.5}\u00b0C.`,\n    briefing_ar: `\u0635\u0628\u0627\u062d \u0627\u0644\u062e\u064a\u0631. \u062a\u0643\u0644\u0641\u0629 \u062a\u0634\u063a\u064a\u0644 \u0627\u0644\u0645\u062d\u0641\u0638\u0629 \u0627\u0644\u064a\u0648\u0645 ${kpis.total_operating_cost_aed_today || 14200} \u062f\u0631\u0647\u0645. \u062a\u0646\u0628\u064a\u0647 \u0627\u0644\u0637\u0642\u0633: \u0645\u0624\u0634\u0631 \u0627\u0644\u062d\u0631\u0627\u0631\u0629 ${weather.calculated_heat_index_c || 42.5} \u062f\u0631\u062c\u0629 \u0645\u0626\u0648\u064a\u0629.`\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Log Briefing Broadcast",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/08_daily_societal_briefing",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - Daily 7:00 AM": {
+      "main": [
+        [
+          {
+            "node": "Fetch Portfolio KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Resilience Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Portfolio KPIs": {
+      "main": [
+        [
+          {
+            "node": "Compile Bilingual Morning Briefing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Resilience Risk": {
+      "main": [
+        [
+          {
+            "node": "Compile Bilingual Morning Briefing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile Bilingual Morning Briefing": {
+      "main": [
+        [
+          {
+            "node": "Log Briefing Broadcast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}

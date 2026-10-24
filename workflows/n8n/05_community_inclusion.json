@@ -1,0 +1,131 @@
+{
+  "name": "CoolShield AI - 05 Social Inclusion & Multilingual Resident Routing",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Webhook - Resident Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "community-service-request",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "PII Sanitization & Anonymizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const item = $json;\nlet text = item.description || '';\ntext = text.replace(/[\\w\\.-]+@[\\w\\.-]+/g, '[EMAIL REDACTED]');\ntext = text.replace(/(\\+?\\d{1,3}[-.\\s]?)?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}/g, '[PHONE REDACTED]');\nreturn [{ json: { ...item, description: text, sanitized: true } }];"
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "Create Service Request Record",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/community/service-requests",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}"
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "Query Nearest Verified Cooling Hub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/community/resources?category=Cooling+Shelter"
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Return Multilingual Routing",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'TICKET_ASSIGNED', nearest_cooling_hub: $json[0]?.name, message_en: 'Assigned to Community Operations', message_ar: '\u062a\u0645 \u062a\u0648\u062c\u064a\u0647 \u0627\u0644\u0637\u0644\u0628 \u0625\u0644\u0649 \u0641\u0631\u064a\u0642 \u0627\u0644\u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u0645\u062c\u062a\u0645\u0639\u064a\u0629' }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Resident Request": {
+      "main": [
+        [
+          {
+            "node": "PII Sanitization & Anonymizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PII Sanitization & Anonymizer": {
+      "main": [
+        [
+          {
+            "node": "Create Service Request Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Service Request Record": {
+      "main": [
+        [
+          {
+            "node": "Query Nearest Verified Cooling Hub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Nearest Verified Cooling Hub": {
+      "main": [
+        [
+          {
+            "node": "Return Multilingual Routing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}

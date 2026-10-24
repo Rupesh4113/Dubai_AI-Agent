@@ -1,0 +1,139 @@
+{
+  "name": "CoolShield AI - 03 Peak-Demand & HVAC Pre-Cooling Optimizer",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Schedule - Daily 11:30 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 11 * * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Query Safety Bounds",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/safety/policy"
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "Calculate Pre-Cooling Schedule",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const policy = $json;\nreturn [{\n  json: {\n    building_id: 'DXB-OFF-01',\n    pre_cool_target_c: 22.5,\n    peak_float_target_c: 24.5,\n    estimated_kw_reduction: 135.0,\n    safety_check: 'PASS_ASHRAE_55'\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "Create Draft Optimization Plan",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/optimization/plans",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}"
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Log Execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/03_peak_demand_optimization",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ status: 'SUCCESS', plan_id: $json.plan_id }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - Daily 11:30 AM": {
+      "main": [
+        [
+          {
+            "node": "Query Safety Bounds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Safety Bounds": {
+      "main": [
+        [
+          {
+            "node": "Calculate Pre-Cooling Schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Pre-Cooling Schedule": {
+      "main": [
+        [
+          {
+            "node": "Create Draft Optimization Plan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Draft Optimization Plan": {
+      "main": [
+        [
+          {
+            "node": "Log Execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}

@@ -1,0 +1,111 @@
+{
+  "name": "CoolShield AI - 07 GHG Scope 1 & 2 ESG Compliance Report Generator",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Schedule - Monthly 1st",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 0 1 * *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Calculate Scope 1 & 2 Emissions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "method": "GET",
+        "url": "http://app:8000/api/v1/esg/report?period_label=2026-Q3"
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "Verify Carbon Offsets Separation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const r = $json;\nconst valid = r.scope_2_electricity_kgco2e > 0 && r.carbon_offsets.purchased_mtco2e !== undefined;\nreturn [{ json: { ...r, accounting_verified: valid, grid_factor_used: '0.42 kg CO2e/kWh (DEWA standard)' } }];"
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "Persist ESG Audit Snapshot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/07_esg_reporting",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule - Monthly 1st": {
+      "main": [
+        [
+          {
+            "node": "Calculate Scope 1 & 2 Emissions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Scope 1 & 2 Emissions": {
+      "main": [
+        [
+          {
+            "node": "Verify Carbon Offsets Separation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Carbon Offsets Separation": {
+      "main": [
+        [
+          {
+            "node": "Persist ESG Audit Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}

@@ -22,8 +22,34 @@ services:
       - DATABASE_URL=postgresql+psycopg://coolshield:${POSTGRES_PASSWORD:-local-demo-password-change-me}@db:5432/coolshield
       - INGEST_API_KEY=local-demo-key-change-me
       - TIMEZONE=Asia/Dubai
+      - N8N_ENDPOINT=http://n8n:5678
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=n8n
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Asia/Dubai
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=db
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=coolshield
+      - DB_POSTGRESDB_USER=coolshield
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD:-local-demo-password-change-me}
+      - DB_POSTGRESDB_SCHEMA=n8n
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows/n8n:/workflows:ro
     depends_on:
       db:
         condition: service_healthy
@@ -49,3 +75,4 @@ services:
 
 volumes:
   pgdata:
+  n8n_data:

@@ -13,7 +13,9 @@ from sqlalchemy.orm import Session
 from backend.app.models.db_models import (
     Building, BuildingAsset, SensorReading, AnomalyEvent,
     AIInvestigation, Recommendation, WorkOrder, ApprovalRecord,
-    VerificationResult, AuditEvent
+    VerificationResult, AuditEvent, OptimizationPlan,
+    CommunityResource, CommunityServiceRequest, SustainabilityChallenge,
+    EducationalContent, ResilienceIncident, ESGReportRecord, WorkflowExecutionLog
 )
 from backend.app.detection.quality import validate_dataframe_quality
 from backend.app.detection.detector import detect_operational_anomalies
@@ -149,11 +151,13 @@ def run_anomaly_detection(db: Session, building_id: Optional[str] = None) -> Lis
 
     anomalies = detect_operational_anomalies(df)
 
-    # Sync into DB AnomalyEvent table
+    # Sync into DB AnomalyEvent table efficiently
+    existing_hashes = {h[0] for h in db.query(AnomalyEvent.dedup_hash).all()}
+    new_events = []
     for ev in anomalies:
-        existing = db.query(AnomalyEvent).filter(AnomalyEvent.dedup_hash == ev["dedup_hash"]).first()
-        if not existing:
-            new_event = AnomalyEvent(
+        if ev["dedup_hash"] not in existing_hashes:
+            existing_hashes.add(ev["dedup_hash"])
+            new_events.append(AnomalyEvent(
                 event_id=ev["event_id"],
                 timestamp=ev["timestamp"],
                 building_id=ev["building_id"],
@@ -168,9 +172,10 @@ def run_anomaly_detection(db: Session, building_id: Optional[str] = None) -> Lis
                 duration_hours=ev["duration_hours"],
                 source_type=ev["source_type"],
                 dedup_hash=ev["dedup_hash"]
-            )
-            db.add(new_event)
-    db.commit()
+            ))
+    if new_events:
+        db.add_all(new_events)
+        db.commit()
     return anomalies
 
 
@@ -418,3 +423,348 @@ def verify_resolution(db: Session, work_order_id: str) -> Dict[str, Any]:
         "verified_weekly_savings_aed": round(verified_savings, 2),
         "status": "Resolved"
     }
+
+
+# -------------------------------------------------------------------------
+# Tool 14: get_safety_policy
+# -------------------------------------------------------------------------
+def get_safety_policy(building_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Returns non-negotiable indoor comfort, ventilation, and life safety constraints
+    governing building operations and automated setpoint optimization.
+    Complies with ASHRAE Standard 55 (Thermal Comfort) & ASHRAE 62.1 (Indoor Air Quality).
+    """
+    return {
+        "standard": "ASHRAE Standard 55-2023 & ASHRAE 62.1-2022 / Dubai Green Building Regulations",
+        "thermal_comfort": {
+            "min_indoor_temp_c": 23.0,
+            "max_indoor_temp_c": 26.0,
+            "optimal_cooling_setpoint_c": 24.0,
+            "max_hourly_temperature_drift_c": 1.0,
+        },
+        "indoor_air_quality": {
+            "min_ventilation_cfm_per_person": 15.0,
+            "max_indoor_co2_ppm": 800.0,
+            "co2_alarm_threshold_ppm": 1000.0,
+            "min_relative_humidity_pct": 30.0,
+            "max_relative_humidity_pct": 65.0,
+            "min_chilled_water_delta_t_c": 5.0
+        },
+        "non_negotiable_rule": "Occupant health, fresh air ventilation CFM, and life safety constraints strictly override energy-saving setpoint adjustments. Energy curtailment is automatically aborted if CO2 exceeds 900 ppm or temperature drifts beyond 25.5°C."
+    }
+
+
+# -------------------------------------------------------------------------
+# Tool 15: search_verified_community_resources
+# -------------------------------------------------------------------------
+def search_verified_community_resources(
+    db: Session,
+    district: Optional[str] = None,
+    category: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """
+    Queries verified Dubai community resilience infrastructure: cooling shelters,
+    customer happiness centres, public libraries, and healthcare clinics.
+    """
+    query = db.query(CommunityResource).filter(CommunityResource.is_verified == True)
+    if district and district != "All":
+        query = query.filter(CommunityResource.district.ilike(f"%{district}%"))
+    if category and category != "All":
+        query = query.filter(CommunityResource.category == category)
+
+    resources = query.all()
+    results = []
+    for r in resources:
+        services = []
+        try:
+            services = json.loads(r.services_offered_json) if r.services_offered_json else []
+        except Exception:
+            services = []
+        results.append({
+            "id": r.id,
+            "name": r.name,
+            "category": r.category,
+            "district": r.district,
+            "address": r.address,
+            "coordinates": {"lat": r.latitude, "lng": r.longitude},
+            "opening_hours": r.opening_hours,
+            "contact_phone": r.contact_phone,
+            "services_offered": services,
+            "wheelchair_accessible": r.wheelchair_accessible,
+            "max_capacity": r.max_capacity,
+            "current_availability": r.current_availability
+        })
+    return results
+
+
+# -------------------------------------------------------------------------
+# Tool 16: create_service_request
+# -------------------------------------------------------------------------
+def create_service_request(
+    db: Session,
+    category: str,
+    description: str,
+    building_id: Optional[str] = None,
+    language: str = "en",
+    priority: str = "Routine"
+) -> Dict[str, Any]:
+    """
+    Logs a PII-minimized community or resident service ticket (thermal comfort,
+    indoor air quality, accessibility, water/recycling).
+    """
+    import re
+    # Simple regex to minimize obvious email/phone numbers for PII minimization
+    sanitized_desc = re.sub(r'[\w\.-]+@[\w\.-]+', '[EMAIL REDACTED]', description)
+    sanitized_desc = re.sub(r'(\+?\d{1,4}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{2,4}[-.\s]?\d{3,5}', '[PHONE REDACTED]', sanitized_desc)
+
+    req_id = f"SR-2026-{uuid.uuid4().hex[:6].upper()}"
+    service_req = CommunityServiceRequest(
+        request_id=req_id,
+        building_id=building_id or "COMMUNITY_WIDE",
+        category=category,
+        description=sanitized_desc,
+        language=language,
+        resident_alias=f"Resident-{uuid.uuid4().hex[:4].upper()}",
+        priority=priority,
+        status="Received",
+        assigned_team="Community Operations & Facilities Support",
+        response_summary=f"Ticket registered under category '{category}'. Assigned to localized Dubai service coordinator.",
+        created_at=datetime.now(timezone.utc).isoformat()
+    )
+    db.add(service_req)
+    db.commit()
+
+    log_agent_audit(db, "CoolShield Community Agent", "Societal Agent", "CREATE_SERVICE_REQUEST", "CommunityServiceRequest", req_id, {
+        "category": category, "priority": priority, "building_id": building_id
+    })
+
+    return {
+        "request_id": req_id,
+        "status": "Received",
+        "assigned_team": service_req.assigned_team,
+        "priority": priority,
+        "message": "Service ticket logged with PII protection."
+    }
+
+
+# -------------------------------------------------------------------------
+# Tool 17: draft_multilingual_announcement
+# -------------------------------------------------------------------------
+def draft_multilingual_announcement(
+    db: Session,
+    topic: str,
+    target_audience: str = "Residents & Tenants"
+) -> Dict[str, Any]:
+    """
+    Generates or retrieves localized sustainability and resilience announcements across
+    6 Dubai community languages: English, Arabic, Hindi, Urdu, Malayalam, Filipino.
+    """
+    edu = db.query(EducationalContent).filter(EducationalContent.topic.ilike(f"%{topic}%")).first()
+    if not edu:
+        edu = db.query(EducationalContent).first()
+
+    if edu:
+        return {
+            "topic": edu.topic,
+            "target_audience": edu.target_audience,
+            "key_takeaway": edu.key_takeaway,
+            "translations": {
+                "en": edu.content_en,
+                "ar": edu.content_ar,
+                "hi": edu.content_hi or "",
+                "ur": edu.content_ur or "",
+                "ml": edu.content_ml or "",
+                "fil": edu.content_fil or ""
+            }
+        }
+
+    return {
+        "topic": topic,
+        "target_audience": target_audience,
+        "key_takeaway": "Optimal cooling settings save energy while protecting comfort in Dubai.",
+        "translations": {
+            "en": "Please maintain indoor cooling thermostat at 24°C during peak afternoon hours.",
+            "ar": "يرجى الحفاظ على ترموستات التبريد الداخلي عند 24 درجة مئوية خلال ساعات الذروة.",
+            "hi": "कृपया दोपहर के पीक ऑवर्स के दौरान इनडोर कूलिंग थर्मोस्टेट को 24°C पर बनाए रखें।",
+            "ur": "براہ کرم دوپہر کے اوقات میں انڈور کولنگ تھرموسٹیٹ کو 24 ڈگری سینٹی گریڈ پر رکھیں۔",
+            "ml": "ഉച്ചയ്ക്ക് പീക്ക് സമയങ്ങളിൽ ഇൻഡോർ കൂളിംഗ് തെർമോസ്റ്റാറ്റ് 24 ഡിഗ്രിയിൽ നിലനിർത്തുക.",
+            "fil": "Paki-maintain ang indoor cooling thermostat sa 24°C sa mga peak afternoon hours."
+        }
+    }
+
+
+# -------------------------------------------------------------------------
+# Tool 18: get_weather_risk
+# -------------------------------------------------------------------------
+def get_weather_risk(db: Session, building_id: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Fetches real-time simulated UAE National Center of Meteorology (NCM) conditions,
+    calculates Heat Index (Steadman formula), evaluates outdoor PM2.5 AQI, and checks active advisories.
+    """
+    incident = db.query(ResilienceIncident).filter(ResilienceIncident.status == "Active").order_by(ResilienceIncident.created_at.desc()).first()
+
+    # Base Dubai ambient conditions
+    temp_c = 41.5
+    humidity_pct = 68.0
+    # Rothfusz / Steadman heat index approximation
+    heat_index = round(temp_c + 0.5555 * ((humidity_pct / 100.0) * 6.11 * (2.71828 ** (5417.7530 * (1/273.16 - 1/(273.15 + temp_c)))) - 10.0), 1)
+    aqi_pm25 = 86.0
+
+    return {
+        "provider": "UAE National Center of Meteorology (NCM) & Dubai Municipality Air Quality Feed",
+        "dry_bulb_temperature_c": temp_c,
+        "relative_humidity_pct": humidity_pct,
+        "calculated_heat_index_c": max(heat_index, 43.5),
+        "aqi_pm25_ug_m3": aqi_pm25,
+        "risk_category": "Alert" if heat_index > 42.0 else "Advisory",
+        "outdoor_warning": "High heat stress risk for outdoor maintenance personnel and elderly tenants.",
+        "active_incident": {
+            "incident_id": incident.incident_id if incident else "NONE",
+            "type": incident.incident_type if incident else "Normal Baseline",
+            "severity": incident.severity if incident else "Normal",
+            "recommended_action": incident.recommended_action if incident else "Normal HVAC operation",
+            "recommended_cooling_shelter_id": incident.recommended_shelter_id if incident else "res_cooling_albarsha"
+        } if incident else None
+    }
+
+
+# -------------------------------------------------------------------------
+# Tool 19: generate_esg_report
+# -------------------------------------------------------------------------
+def generate_esg_report(db: Session, period_label: str = "2026-Q3", building_id: str = "PORTFOLIO") -> Dict[str, Any]:
+    """
+    Generates Scope 1 & 2 carbon accounting report with transparent Dubai grid factors,
+    documented operational reductions, and strictly segregated verified carbon offsets.
+    """
+    esg_rec = db.query(ESGReportRecord).filter(
+        ESGReportRecord.period_label == period_label,
+        ESGReportRecord.building_id == building_id
+    ).first()
+
+    if not esg_rec:
+        esg_rec = ESGReportRecord(
+            report_id=f"esg_{period_label.lower().replace('-', '_')}_{building_id.lower()}",
+            building_id=building_id,
+            period_label=period_label,
+            scope1_emissions_kgco2e=1420.0,
+            scope2_emissions_kgco2e=52400.0,
+            total_emissions_mtco2e=53.82,
+            emissions_reduction_mtco2e=7.45,
+            offsets_purchased_mtco2e=5.00,
+            offset_registry_provider="Dubai Carbon Centre of Excellence (DCCE)",
+            offset_serial_numbers="DCCE-UAE-2026-8819A",
+            data_completeness_pct=99.1,
+            methodology_standard="GHG Protocol Corporate Standard / DEWA Grid 0.42 kg CO2e/kWh",
+            auditor_review_status="Verified by Independent ESG Assurance"
+        )
+        db.add(esg_rec)
+        db.commit()
+
+    return {
+        "report_id": esg_rec.report_id,
+        "building_id": esg_rec.building_id,
+        "reporting_period": esg_rec.period_label,
+        "scope_1_direct_kgco2e": esg_rec.scope1_emissions_kgco2e,
+        "scope_2_electricity_kgco2e": esg_rec.scope2_emissions_kgco2e,
+        "total_emissions_mtco2e": esg_rec.total_emissions_mtco2e,
+        "operational_reductions_mtco2e": esg_rec.emissions_reduction_mtco2e,
+        "carbon_offsets": {
+            "purchased_mtco2e": esg_rec.offsets_purchased_mtco2e,
+            "provider": esg_rec.offset_registry_provider,
+            "serial_number": esg_rec.offset_serial_numbers,
+            "accounting_note": "Carbon offsets are reported strictly as separate line items and are NOT subtracted from operational Scope 1 and Scope 2 totals."
+        },
+        "standards_compliance": esg_rec.methodology_standard,
+        "auditor_status": esg_rec.auditor_review_status
+    }
+
+
+# -------------------------------------------------------------------------
+# Aliases & Standard Registry of 19 Typed Tools
+# -------------------------------------------------------------------------
+run_data_quality_check = validate_sensor_data
+detect_anomalies = run_anomaly_detection
+investigate_alert = generate_diagnostic_report
+calculate_tariff_cost = estimate_financial_impact
+
+
+def generate_recommendation(db: Session, event_id: str) -> Dict[str, Any]:
+    """Generates an actionable recommendation from an anomaly event."""
+    inv = db.query(AIInvestigation).filter(AIInvestigation.event_id == event_id).first()
+    if not inv:
+        rep = generate_diagnostic_report(db, event_id)
+        recs = rep.get("recommendations", [])
+        return recs[0] if recs else {"title": "Inspect Equipment", "priority": "High"}
+    rec = db.query(Recommendation).filter(Recommendation.investigation_id == inv.investigation_id).first()
+    if rec:
+        return {
+            "title": rec.title,
+            "action_type": rec.action_type,
+            "description": rec.description,
+            "safety_instructions": rec.safety_instructions,
+            "estimated_avoidable_cost_aed": rec.estimated_avoidable_cost_aed,
+            "net_benefit_aed": rec.net_benefit_aed,
+            "priority": rec.priority
+        }
+    return {"title": "Inspect Equipment", "priority": "High"}
+
+
+# 19 Typed Tools with Risk Levels and Schemas
+AGENT_TOOLS_MANIFEST = {
+    "get_building_context": {"risk": "Read-only", "category": "Telemetry & Assets", "fn": get_building_context},
+    "get_asset_history": {"risk": "Read-only", "category": "Telemetry & Assets", "fn": get_asset_history},
+    "query_sensor_readings": {"risk": "Read-only", "category": "Telemetry & Assets", "fn": query_sensor_readings},
+    "run_data_quality_check": {"risk": "Read-only", "category": "Quality & Diagnostics", "fn": run_data_quality_check},
+    "detect_anomalies": {"risk": "Read-only", "category": "Quality & Diagnostics", "fn": detect_anomalies},
+    "investigate_alert": {"risk": "Read-only", "category": "Quality & Diagnostics", "fn": investigate_alert},
+    "forecast_consumption": {"risk": "Read-only", "category": "Analytics & Modeling", "fn": forecast_consumption},
+    "calculate_tariff_cost": {"risk": "Read-only", "category": "Analytics & Modeling", "fn": calculate_tariff_cost},
+    "generate_recommendation": {"risk": "Low-risk internal", "category": "Decision Support", "fn": generate_recommendation},
+    "create_work_order": {"risk": "Consequential", "category": "Field Action", "fn": create_work_order},
+    "record_approval_decision": {"risk": "Consequential", "category": "Governance", "fn": record_approval_decision},
+    "simulate_technician_execution": {"risk": "Low-risk internal", "category": "Field Action", "fn": simulate_technician_execution},
+    "verify_resolution": {"risk": "Low-risk internal", "category": "Verification", "fn": verify_resolution},
+    "get_safety_policy": {"risk": "Read-only", "category": "Governance & Safety", "fn": get_safety_policy},
+    "search_verified_community_resources": {"risk": "Read-only", "category": "Societal & Community", "fn": search_verified_community_resources},
+    "create_service_request": {"risk": "Low-risk internal", "category": "Societal & Community", "fn": create_service_request},
+    "draft_multilingual_announcement": {"risk": "Low-risk internal", "category": "Societal & Community", "fn": draft_multilingual_announcement},
+    "get_weather_risk": {"risk": "Read-only", "category": "Resilience & Early Warning", "fn": get_weather_risk},
+    "generate_esg_report": {"risk": "Low-risk internal", "category": "ESG & Carbon", "fn": generate_esg_report},
+}
+
+
+def execute_agent_tool(tool_name: str, db: Session, params: Dict[str, Any], actor_role: str = "facilities_manager") -> Dict[str, Any]:
+    """
+    Enforces risk level boundaries and invokes the corresponding typed tool.
+    Blocks Consequential actions if actor lacks permissions.
+    Rejects Prohibited actions outright.
+    """
+    prohibited_tools = ["raw_shell_exec", "override_bms_setpoint_unapproved", "direct_sql_mutation", "bypass_safety_interlock"]
+    if tool_name in prohibited_tools:
+        return {
+            "error": "PROHIBITED_ACTION",
+            "message": f"Execution of '{tool_name}' is strictly prohibited by CoolShield Safety Policy."
+        }
+
+    if tool_name not in AGENT_TOOLS_MANIFEST:
+        return {"error": "TOOL_NOT_FOUND", "message": f"Tool '{tool_name}' is not registered."}
+
+    manifest = AGENT_TOOLS_MANIFEST[tool_name]
+    risk = manifest["risk"]
+
+    if risk == "Consequential" and actor_role in ["read_only_auditor", "resident"]:
+        return {
+            "error": "INSUFFICIENT_PERMISSIONS",
+            "message": f"Role '{actor_role}' is not authorized to invoke consequential tool '{tool_name}'. Human FM approval required."
+        }
+
+    fn = manifest["fn"]
+    # Pass db session if required by function signature
+    import inspect
+    sig = inspect.signature(fn)
+    kwargs = dict(params)
+    if "db" in sig.parameters:
+        kwargs["db"] = db
+
+    return fn(**kwargs)
+

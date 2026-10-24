@@ -1,0 +1,163 @@
+{
+  "name": "CoolShield AI - 04 Human Approval & Consequential Action Guardrail",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Webhook - Action Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "approval-request",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Risk Level Classifier",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.risk_level }}",
+              "operation": "equals",
+              "value2": "Consequential"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "Hold for FM Approval (Wait)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        240
+      ],
+      "parameters": {
+        "resume": "webhook",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "Auto-Approve Read-Only / Low-Risk",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        400
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'AUTO_APPROVED', risk: 'Low-risk' }) }}"
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Execute Approved Action",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        920,
+        240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/work-orders/approve",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify($json) }}"
+      }
+    },
+    {
+      "id": "node-6",
+      "name": "Notify Assigned Technician",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1140,
+        240
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/04_human_approval",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ status: 'DISPATCHED_TO_FIELD', work_order_id: $json.work_order_id }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Action Request": {
+      "main": [
+        [
+          {
+            "node": "Risk Level Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Risk Level Classifier": {
+      "main": [
+        [
+          {
+            "node": "Hold for FM Approval (Wait)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Auto-Approve Read-Only / Low-Risk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hold for FM Approval (Wait)": {
+      "main": [
+        [
+          {
+            "node": "Execute Approved Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Approved Action": {
+      "main": [
+        [
+          {
+            "node": "Notify Assigned Technician",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}

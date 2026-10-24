@@ -12,7 +12,10 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from backend.app.models.db_models import (
     Building, BuildingAsset, SensorReading, UtilityTariff,
-    IntegrationConnection, CustomerInterviewRecord, User
+    IntegrationConnection, CustomerInterviewRecord, User,
+    OptimizationPlan, CommunityResource, CommunityServiceRequest,
+    SustainabilityChallenge, ChallengeParticipation, EducationalContent,
+    ResilienceIncident, ESGReportRecord, WorkflowExecutionLog
 )
 
 BUILDING_DEFINITIONS = [
@@ -319,6 +322,7 @@ def seed_database_with_defaults(db: Session, force_reset: bool = False):
     """
     existing_buildings = db.query(Building).count()
     if existing_buildings > 0 and not force_reset:
+        seed_societal_data(db)
         return
 
     if force_reset:
@@ -411,9 +415,12 @@ def seed_database_with_defaults(db: Session, force_reset: bool = False):
     )
     db.add(pilot)
 
+    # 6. Seed Societal AI Modules Data
+    seed_societal_data(db)
+
     db.commit()
 
-    # 6. Generate and save synthetic sensor readings
+    # 7. Generate and save synthetic sensor readings
     df = generate_synthetic_dataset(days=90, seed=42)
     records = df.to_dict(orient="records")
     # Batch insert to avoid SQLite parameter limit
@@ -423,7 +430,7 @@ def seed_database_with_defaults(db: Session, force_reset: bool = False):
         db.add_all(chunk)
         db.commit()
 
-    # 7. Write Dataset Manifest to disk
+    # 8. Write Dataset Manifest to disk
     manifest_path = os.path.join("data", "manifests", "dataset_manifest.json")
     os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
     manifest_data = {
@@ -445,3 +452,284 @@ def seed_database_with_defaults(db: Session, force_reset: bool = False):
     }
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest_data, f, indent=2)
+
+
+def seed_societal_data(db: Session):
+    """Seed Dubai Societal AI data: Community resources, challenges, education, resilience incidents, ESG records, and workflow logs."""
+    # 1. Community Resources (Cooling shelters, happiness centres, health clinics)
+    if db.query(CommunityResource).count() == 0:
+        resources = [
+            CommunityResource(
+                id="res_cooling_albarsha",
+                name="Al Barsha Community Centre Cooling Hub",
+                category="Cooling Shelter",
+                district="Al Barsha 2",
+                address="9th Street, Al Barsha 2, Dubai",
+                latitude=25.1098,
+                longitude=55.2012,
+                opening_hours="07:00 - 23:00",
+                contact_phone="+971-4-800-900",
+                services_offered_json=json.dumps(["Air conditioned cooling lounge", "Free chilled hydration electrolyte station", "Wi-Fi & Device charging", "First-aid triage & blood pressure check"]),
+                is_verified=True,
+                wheelchair_accessible=True,
+                max_capacity=220,
+                current_availability="Open"
+            ),
+            CommunityResource(
+                id="res_happiness_downtown",
+                name="Downtown Dubai Customer Happiness Centre",
+                category="Happiness Centre",
+                district="Downtown Dubai",
+                address="Financial Centre Road, Downtown Dubai",
+                latitude=25.1972,
+                longitude=55.2744,
+                opening_hours="08:00 - 20:00",
+                contact_phone="+971-4-800-3392",
+                services_offered_json=json.dumps(["DEWA smart bill consultations", "Multilingual translation assistance (6 languages)", "People of Determination priority service"]),
+                is_verified=True,
+                wheelchair_accessible=True,
+                max_capacity=160,
+                current_availability="Open"
+            ),
+            CommunityResource(
+                id="res_cooling_deira",
+                name="Deira Heritage Public Library & Climate Haven",
+                category="Cooling Shelter",
+                district="Deira / Al Ras",
+                address="Al Khaleej Road, Al Ras, Dubai",
+                latitude=25.2711,
+                longitude=55.2974,
+                opening_hours="08:00 - 22:00",
+                contact_phone="+971-4-515-5000",
+                services_offered_json=json.dumps(["Climate-controlled study halls", "Filtered water dispensers", "Children literacy & environmental education zone"]),
+                is_verified=True,
+                wheelchair_accessible=True,
+                max_capacity=180,
+                current_availability="Open"
+            ),
+            CommunityResource(
+                id="res_clinic_alwasl",
+                name="Al Wasl Health & Wellness Clinic",
+                category="Health Clinic",
+                district="City Walk / Al Wasl",
+                address="Al Wasl Road, Jumeirah 1, Dubai",
+                latitude=25.2150,
+                longitude=55.2580,
+                opening_hours="08:00 - 21:00",
+                contact_phone="+971-4-344-0000",
+                services_offered_json=json.dumps(["Heat stress recovery & rehydration", "Respiratory consultation (AQI dust sensitivity)", "General preventative screening"]),
+                is_verified=True,
+                wheelchair_accessible=True,
+                max_capacity=90,
+                current_availability="Open"
+            ),
+            CommunityResource(
+                id="res_recycling_marina",
+                name="Dubai Marina Circularity & Eco-Hub",
+                category="Recycling Hub",
+                district="Dubai Marina",
+                address="Marina Promenade, Dubai Marina, Dubai",
+                latitude=25.0780,
+                longitude=55.1380,
+                opening_hours="09:00 - 21:00",
+                contact_phone="+971-4-800-4444",
+                services_offered_json=json.dumps(["E-waste and battery drop-off", "Plastics and cardboard sorting", "Building energy audit consultations"]),
+                is_verified=True,
+                wheelchair_accessible=True,
+                max_capacity=60,
+                current_availability="Open"
+            )
+        ]
+        db.add_all(resources)
+
+    # 2. Sustainability Challenges
+    if db.query(SustainabilityChallenge).count() == 0:
+        challenges = [
+            SustainabilityChallenge(
+                id="ch_2026_w43",
+                title="Dubai 24°C Comfort & Cool Sprint (Week 43)",
+                category="Energy Conservation",
+                description="Keep indoor thermostat at 24°C or above during DEWA peak tariff hours (12:00 - 18:00) to support grid stability.",
+                target_metric="Thermostat setpoint >= 24°C during 12:00-18:00 window",
+                duration_days=7,
+                total_participants=164,
+                aggregate_savings_kwh_or_m3=3640.0,
+                status="Active",
+                start_date="2026-10-20",
+                end_date="2026-10-27"
+            ),
+            SustainabilityChallenge(
+                id="ch_2026_w42",
+                title="Zero Night Flow Water Leak Audit",
+                category="Water Stewardship",
+                description="Verify zero unexplained flow in domestic booster and sub-meters between 02:00 AM and 05:00 AM.",
+                target_metric="Zero unexpected baseline flow in dormant hours",
+                duration_days=7,
+                total_participants=98,
+                aggregate_savings_kwh_or_m3=215.0,
+                status="Active",
+                start_date="2026-10-18",
+                end_date="2026-10-25"
+            ),
+            SustainabilityChallenge(
+                id="ch_2026_w44",
+                title="Pre-Cooling Commercial Building Challenge",
+                category="Energy Conservation",
+                description="Pre-cool thermal mass to 22.5°C before 11:30 AM, then drift setpoint up during peak hours to shed up to 15% peak load.",
+                target_metric="15% peak KW reduction during DEWA peak window",
+                duration_days=7,
+                total_participants=54,
+                aggregate_savings_kwh_or_m3=4890.0,
+                status="Upcoming",
+                start_date="2026-10-27",
+                end_date="2026-11-03"
+            )
+        ]
+        db.add_all(challenges)
+
+    # 3. Multilingual Educational Content (6 Languages)
+    if db.query(EducationalContent).count() == 0:
+        edu_items = [
+            EducationalContent(
+                id="edu_comfort_24",
+                title="The 24°C Comfort Standard: Efficiency & Well-being",
+                topic="Thermostat Setpoints",
+                target_audience="Commercial Occupants & Residents",
+                content_en="Setting your thermostat to 24°C provides ideal thermal comfort under UAE conditions while cutting cooling electricity by up to 9% per degree Celsius compared to 20°C.",
+                content_ar="إن ضبط منظم الحرارة (الثرموستات) عند 24 درجة مئوية يوفر الراحة الحرارية المثالية في مناخ الإمارات مع خفض استهلاك طاقة التبريد بنسبة تصل إلى 9% لكل درجة مئوية مقارنة بـ 20 درجة.",
+                content_hi="अपने थर्मोस्टेट को 24 डिग्री सेल्सियस पर सेट करने से यूएई की जलवायु में आदर्श आराम मिलता है और 20 डिग्री की तुलना में ऊर्जा की खपत में 9% तक की कमी आती है।",
+                content_ur="تھرموسٹیٹ کو 24 ڈگری سینٹی گریڈ پر رکھنا مثالی آرام فراہم کرتا ہے اور 20 ڈگری کے مقابلے میں 9 فیصد تک بجلی کی بچت کرتا ہے۔",
+                content_ml="തെർമോസ്റ്റാറ്റ് 24 ഡിഗ്രി സെൽഷ്യസിൽ ക്രമീകരിക്കുന്നത് യുഎഇയിലെ താപനിലയിൽ മികച്ച സുഖസൗകര്യം നൽകുകയും തണുപ്പിക്കൽ ഊർജ്ജം 9% വരെ കുറയ്ക്കുകയും ചെയ്യുന്നു.",
+                content_fil="Ang pag-set ng thermostat sa 24°C ay nagbibigay ng perpektong ginhawa sa klima ng UAE habang binabawasan ang pagkonsumo ng kuryente nang hanggang 9%.",
+                key_takeaway="Every 1°C increase in AC setpoint saves ~9% electricity without compromising thermal comfort.",
+                is_approved=True
+            ),
+            EducationalContent(
+                id="edu_water_leak_detect",
+                title="Early Detection of Concealed Water Leaks",
+                topic="Water Stewardship",
+                target_audience="Facility Managers & Property Staff",
+                content_en="A continuous trickle of just 1 liter per minute from a concealed booster pump or toilet cistern wastes over 1,440 liters daily (~AED 650/month in Dubai tariffs).",
+                content_ar="إن تسرباً خفياً مستمراً بمعدل لتر واحد فقط في الدقيقة يهدر أكثر من 1,440 لتراً يومياً (حوالي 650 درهماً شهرياً وفق تسعيرة ديوا في دبي).",
+                content_hi="प्रति मिनट सिर्फ 1 लीटर का निरंतर रिसाव रोजाना 1,440 लीटर पानी बर्बाद करता है (दुबई टैरिफ में लगभग 650 दिरहम प्रति माह)।",
+                content_ur="ایک منٹ میں صرف ایک لیٹر کا مسلسل رساؤ روزانہ 1440 لیٹر پانی ضائع کرتا ہے۔",
+                content_ml="ഒരു മിനിറ്റിൽ 1 ലിറ്റർ വെള്ളം ചോരുന്നത് പ്രതിദിനം 1,440 ലിറ്റർ വെള്ളം പാഴാക്കുന്നു.",
+                content_fil="Ang patuloy na pagtagas ng 1 litro kada minuto ay nag-aaksaya ng higit sa 1,440 litro ng tubig araw-araw.",
+                key_takeaway="Check sub-meter baseline flow between 02:00 AM and 05:00 AM when occupancy is dormant.",
+                is_approved=True
+            )
+        ]
+        db.add_all(edu_items)
+
+    # 4. Resilience Incidents (Heat Index & Air Quality)
+    if db.query(ResilienceIncident).count() == 0:
+        incidents = [
+            ResilienceIncident(
+                incident_id="res_heat_2026_01",
+                building_id="EMIRATE_WIDE",
+                incident_type="Extreme Heat Wave Advisory",
+                severity="Alert",
+                heat_index_c=43.8,
+                aqi_pm25=84.0,
+                description="National Center of Meteorology (NCM) advisory: Coastal heat index reaching 43.8°C with 71% humidity. Outdoor thermal stress elevated.",
+                recommended_action="Activate pre-cooling cycle; maintain chiller delta-T above 5.0°C; route vulnerable staff to verified cooling hubs (Al Barsha / Downtown).",
+                recommended_shelter_id="res_cooling_albarsha",
+                data_freshness_minutes=4,
+                is_confirmed=True,
+                status="Active"
+            ),
+            ResilienceIncident(
+                incident_id="res_aqi_2026_02",
+                building_id="DXB-OFF-01",
+                incident_type="Elevated Particulate Inflow (PM2.5)",
+                severity="Advisory",
+                heat_index_c=36.0,
+                aqi_pm25=115.0,
+                description="Outdoor PM2.5 elevated to 115 µg/m³ due to moderate dust drift. Indoor air filtration priority.",
+                recommended_action="Ensure AHU minimum ventilation compliance (ASHRAE 62.1); inspect secondary pre-filters; keep zone pressure positive.",
+                recommended_shelter_id="res_happiness_downtown",
+                data_freshness_minutes=6,
+                is_confirmed=True,
+                status="Active"
+            )
+        ]
+        db.add_all(incidents)
+
+    # 5. Peak Demand Optimization Plan (Module B)
+    if db.query(OptimizationPlan).count() == 0:
+        opt_plan = OptimizationPlan(
+            plan_id="opt_plan_peak_dxb01",
+            building_id="DXB-OFF-01",
+            trigger_reason="DEWA Peak Tariff Window (12:00 - 18:00)",
+            eligible_loads_json=json.dumps([
+                {"asset_id": "DXB-OFF-01-CH-01", "name": "Centrifugal Chiller 1", "action": "Increase CHW setpoint from 6.8°C to 8.0°C", "load_reduction_kw": 115.0},
+                {"asset_id": "DXB-OFF-01-AHU-04", "name": "Podium AHU 4", "action": "Modulate supply fan VFD speed to 82%", "load_reduction_kw": 18.0}
+            ]),
+            safety_constraints_json=json.dumps({
+                "min_indoor_temp_c": 23.5,
+                "max_indoor_temp_c": 25.5,
+                "min_ventilation_cfm_per_person": 15.0,
+                "max_co2_ppm": 800,
+                "max_rh_pct": 65.0
+            }),
+            estimated_demand_reduction_kw=133.0,
+            estimated_cost_avoided_aed=495.0,
+            approval_status="Pending",
+            approved_by=None,
+            execution_status="Draft",
+            baseline_kw=820.0,
+            actual_kw=0.0,
+            verified_savings_kw=0.0,
+            safety_breach_detected=False
+        )
+        db.add(opt_plan)
+
+    # 6. Scope 1 & 2 ESG Report Record
+    if db.query(ESGReportRecord).count() == 0:
+        esg_rec = ESGReportRecord(
+            report_id="esg_q3_2026_portfolio",
+            building_id="PORTFOLIO",
+            period_label="2026-Q3",
+            period_start="2026-07-01",
+            period_end="2026-09-30",
+            scope1_emissions_kgco2e=1420.0,
+            scope2_emissions_kgco2e=52400.0,
+            total_emissions_mtco2e=53.82,
+            emissions_reduction_mtco2e=7.45,
+            offsets_purchased_mtco2e=5.00,
+            offset_registry_provider="Dubai Carbon Centre of Excellence (DCCE)",
+            offset_serial_numbers="DCCE-UAE-2026-8819A",
+            data_completeness_pct=99.1,
+            methodology_standard="GHG Protocol Corporate Standard / DEWA Grid Factor (0.42 kg CO2e/kWh)",
+            auditor_review_status="Verified by Independent ESG Assurance"
+        )
+        db.add(esg_rec)
+
+    # 7. Initial n8n Workflow Execution Logs
+    if db.query(WorkflowExecutionLog).count() == 0:
+        workflow_meta = [
+            ("01_sensor_ingestion", "Sensor Ingestion & Data Quality Validation", "Webhook", 85),
+            ("02_energy_anomaly_detection", "Energy & Water Anomaly Detection Engine", "Schedule", 240),
+            ("03_peak_demand_optimization", "Peak-Demand & HVAC Pre-Cooling Optimizer", "Schedule", 165),
+            ("04_human_approval", "Human-in-the-Loop Consequential Action Approval", "Webhook", 110),
+            ("05_community_inclusion", "Social Inclusion & Multilingual Resident Routing", "Webhook", 95),
+            ("06_resilience_monitoring", "NCM Weather & Heat Resilience Early Warning", "Schedule", 140),
+            ("07_esg_reporting", "GHG Scope 1 & 2 ESG Compliance Report Generator", "Schedule", 380),
+            ("08_daily_societal_briefing", "Daily Societal & Building Operations Briefing", "Schedule", 290),
+            ("09_workflow_health", "n8n Autonomous Workflow Health & Dead-Letter Watchdog", "Schedule", 70),
+        ]
+        logs = [
+            WorkflowExecutionLog(
+                workflow_id=wid,
+                workflow_name=wname,
+                trigger_type=ttype,
+                execution_status="SUCCESS",
+                latency_ms=lat,
+                payload_summary=f"Automated execution completed with 0 errors across 5 Dubai assets.",
+                error_message=None
+            )
+            for wid, wname, ttype, lat in workflow_meta
+        ]
+        db.add_all(logs)
+
+    db.commit()

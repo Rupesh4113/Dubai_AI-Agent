@@ -1,0 +1,163 @@
+{
+  "name": "CoolShield AI - 01 Sensor Ingestion & Quality Validation",
+  "nodes": [
+    {
+      "id": "node-1",
+      "name": "Webhook - Telemetry Inflow",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sensor-ingest",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-2",
+      "name": "Data Quality & Range Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map(item => {\n  const d = item.json;\n  const valid = d.electricity_kwh > 0 && d.indoor_temp_c >= 16 && d.indoor_temp_c <= 38;\n  return { json: { ...d, quality_status: valid ? 'PASS' : 'FLAGGED_OUT_OF_RANGE' } };\n});"
+      }
+    },
+    {
+      "id": "node-3",
+      "name": "Postgres / REST Ingest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/telemetry/ingest",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ $json }}"
+      }
+    },
+    {
+      "id": "node-4",
+      "name": "IF - Ingest Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $response.statusCode }}",
+              "operation": "equals",
+              "value2": 200
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-5",
+      "name": "Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        240
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'INGESTED', timestamp: new Date().toISOString() }) }}"
+      }
+    },
+    {
+      "id": "node-6",
+      "name": "Dead-Letter Queue Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        400
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://app:8000/api/v1/workflows/trigger/01_sensor_ingestion",
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={{ JSON.stringify({ error: 'Ingestion failed or out of bounds', payload: $json }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Telemetry Inflow": {
+      "main": [
+        [
+          {
+            "node": "Data Quality & Range Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Quality & Range Check": {
+      "main": [
+        [
+          {
+            "node": "Postgres / REST Ingest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres / REST Ingest": {
+      "main": [
+        [
+          {
+            "node": "IF - Ingest Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Ingest Success": {
+      "main": [
+        [
+          {
+            "node": "Respond 200 OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dead-Letter Queue Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "coolshield-dubai-n8n-01"
+  }
+}
