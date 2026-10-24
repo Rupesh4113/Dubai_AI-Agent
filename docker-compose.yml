@@ -54,16 +54,6 @@ services:
       db:
         condition: service_healthy
 
-  streamlit-fallback:
-    build: .
-    command: streamlit run app.py --server.address=0.0.0.0 --server.port=8501
-    environment:
-      - DATABASE_URL=sqlite:///./coolshield.db
-    ports:
-      - "8501:8501"
-    profiles:
-      - legacy
-
   mosquitto:
     image: eclipse-mosquitto:2
     ports:

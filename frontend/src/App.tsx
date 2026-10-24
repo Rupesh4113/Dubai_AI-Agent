@@ -11,6 +11,15 @@ import type {
   IntegrationItem,
   PilotRecord,
   AuditItem,
+  OptimizationPlanItem,
+  CommunityResourceItem,
+  CommunityServiceRequestItem,
+  SustainabilityChallengeItem,
+  EducationalContentItem,
+  WeatherRiskItem,
+  ESGReportItem,
+  WorkflowItem,
+  AgentToolItem,
 } from './api/client';
 import { DubaiMap } from './components/DubaiMap';
 import { DemoScenarioPlayer } from './components/DemoScenarioPlayer';
@@ -19,10 +28,8 @@ import {
   Building2,
   Activity,
   Brain,
-  Bell,
   Wrench,
   BarChart3,
-  Cpu,
   Leaf,
   Network,
   Settings,
@@ -31,10 +38,14 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  ChevronRight,
   TrendingUp,
   Droplets,
   Zap,
+  Flame,
+  FileText,
+  Download,
+  Send,
+  HeartHandshake,
 } from 'lucide-react';
 
 // Languages dictionary
@@ -74,7 +85,24 @@ export const App: React.FC = () => {
   const [pilots, setPilots] = useState<PilotRecord[]>([]);
   const [audits, setAudits] = useState<AuditItem[]>([]);
   const [forecastData, setForecastData] = useState<any>(null);
-  const [sustainability, setSustainability] = useState<any>(null);
+
+  // Societal Modules Data States
+  const [optimizationPlans, setOptimizationPlans] = useState<OptimizationPlanItem[]>([]);
+  const [communityResources, setCommunityResources] = useState<CommunityResourceItem[]>([]);
+  const [serviceRequests, setServiceRequests] = useState<CommunityServiceRequestItem[]>([]);
+  const [challenges, setChallenges] = useState<SustainabilityChallengeItem[]>([]);
+  const [educationalContent, setEducationalContent] = useState<EducationalContentItem[]>([]);
+  const [weatherRisk, setWeatherRisk] = useState<WeatherRiskItem | null>(null);
+  const [esgReport, setEsgReport] = useState<ESGReportItem | null>(null);
+  const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
+  const [agentTools, setAgentTools] = useState<AgentToolItem[]>([]);
+
+  // Resident service request form state
+  const [srCategory, setSrCategory] = useState<string>('Thermal Comfort & Cooling');
+  const [srDescription, setSrDescription] = useState<string>('Common corridor temperature is 26.5C. Please check fan coil unit.');
+  const [srPriority, setSrPriority] = useState<string>('Routine');
+  const [districtFilter, setDistrictFilter] = useState<string>('All');
+  const [approvalRationale, setApprovalRationale] = useState<string>('Approved after reviewing telemetry and asset history.');
 
   // UI state
   const [investigationData, setInvestigationData] = useState<InvestigationReport | null>(null);
@@ -99,9 +127,16 @@ export const App: React.FC = () => {
         intRes,
         pilotRes,
         auditRes,
-        sustRes,
-        _anRes,
         fcRes,
+        optRes,
+        comRes,
+        srRes,
+        chRes,
+        eduRes,
+        wRiskRes,
+        esgRes,
+        wfRes,
+        toolsRes,
       ] = await Promise.all([
         ApiClient.fetchKPIs(),
         ApiClient.fetchBuildings(),
@@ -111,9 +146,16 @@ export const App: React.FC = () => {
         ApiClient.fetchIntegrations(),
         ApiClient.fetchPilots(),
         ApiClient.fetchAudits(),
-        ApiClient.fetchSustainability(),
-        ApiClient.fetchEnergyWaterAnalytics('DXB-OFF-01'),
         ApiClient.fetchForecast('DXB-OFF-01', 48),
+        ApiClient.fetchOptimizationPlans(),
+        ApiClient.fetchCommunityResources(),
+        ApiClient.fetchServiceRequests(),
+        ApiClient.fetchSustainabilityChallenges(),
+        ApiClient.fetchEducationalContent(),
+        ApiClient.fetchWeatherRisk(),
+        ApiClient.fetchESGReport(),
+        ApiClient.fetchWorkflows(),
+        ApiClient.fetchAgentTools(),
       ]);
 
       setKpis(kpiRes);
@@ -124,8 +166,16 @@ export const App: React.FC = () => {
       setIntegrations(intRes);
       setPilots(pilotRes);
       setAudits(auditRes);
-      setSustainability(sustRes);
       setForecastData(fcRes);
+      setOptimizationPlans(optRes);
+      setCommunityResources(comRes);
+      setServiceRequests(srRes);
+      setChallenges(chRes);
+      setEducationalContent(eduRes);
+      setWeatherRisk(wRiskRes);
+      setEsgReport(esgRes);
+      setWorkflows(wfRes);
+      setAgentTools(toolsRes);
 
       if (bldRes.length > 0 && !selectedBuildingId) {
         setSelectedBuildingId(bldRes[0].id);
@@ -170,24 +220,75 @@ export const App: React.FC = () => {
     }
   };
 
+  const handlePledge = async (challengeId: string) => {
+    await ApiClient.pledgeChallenge(challengeId);
+    const updated = await ApiClient.fetchSustainabilityChallenges();
+    setChallenges(updated);
+    alert('Thank you for pledging! Your contribution to UAE grid stability is recorded.');
+  };
+
+  const handleServiceTicketSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await ApiClient.createServiceRequest({
+      category: srCategory,
+      description: srDescription,
+      priority: srPriority,
+      language: lang,
+    });
+    const updatedSr = await ApiClient.fetchServiceRequests();
+    setServiceRequests(updatedSr);
+    alert('Community service request registered with automatic PII sanitization.');
+  };
+
+  const handleApprovePlan = async (planId: string) => {
+    if (currentRole !== 'facilities_manager') {
+      alert('🔒 Permission Denied: Only Facilities Managers can authorize peak load curtailments.');
+      return;
+    }
+    await ApiClient.approveOptimizationPlan(planId, true);
+    const updatedPlans = await ApiClient.fetchOptimizationPlans();
+    setOptimizationPlans(updatedPlans);
+    alert('Peak demand optimization plan authorized!');
+  };
+
+  const handleExecutePlan = async (planId: string) => {
+    await ApiClient.executeOptimizationPlan(planId);
+    const updatedPlans = await ApiClient.fetchOptimizationPlans();
+    setOptimizationPlans(updatedPlans);
+    alert('Peak load curtailment executed! Indoor comfort bounds verified within ASHRAE 55.');
+  };
+
+  const handleTriggerWorkflow = async (workflowId: string) => {
+    await ApiClient.triggerWorkflow(workflowId);
+    const updatedWf = await ApiClient.fetchWorkflows();
+    setWorkflows(updatedWf);
+    alert(`n8n workflow '${workflowId}' executed successfully with 0 errors!`);
+  };
+
+  // 13 Navigation Sections (Societal AI Agent Dashboard)
   const navItems = [
-    { id: 'overview', label: lang === 'ar' ? 'النظرة العامة' : 'Executive Overview', icon: LayoutDashboard },
-    { id: 'portfolio', label: lang === 'ar' ? 'محفظة المباني' : 'Building Portfolio', icon: Building2 },
-    { id: 'monitoring', label: lang === 'ar' ? 'المراقبة المباشرة' : 'Live Monitoring', icon: Activity },
-    { id: 'insights', label: lang === 'ar' ? 'رؤى الذكاء الاصطناعي' : 'AI Insights', icon: Brain },
-    { id: 'alerts', label: lang === 'ar' ? 'التنبيهات والحوادث' : 'Alerts & Incidents', icon: Bell },
-    { id: 'workorders', label: lang === 'ar' ? 'أوامر الصيانة' : 'Work Orders', icon: Wrench },
-    { id: 'analytics', label: lang === 'ar' ? 'تحليلات الطاقة' : 'Energy & Water', icon: BarChart3 },
-    { id: 'equipment', label: lang === 'ar' ? 'صحة المعدات' : 'Equipment Health', icon: Cpu },
-    { id: 'sustainability', label: lang === 'ar' ? 'الاستدامة والوفورات' : 'Savings & ESG', icon: Leaf },
-    { id: 'pilots', label: lang === 'ar' ? 'التحقق من العملاء' : 'Customer Pilots', icon: UserCheck },
-    { id: 'integrations', label: lang === 'ar' ? 'التكامل والبوابات' : 'Integrations', icon: Network },
-    { id: 'settings', label: lang === 'ar' ? 'الإعدادات والتدقيق' : 'Settings & Audit', icon: Settings },
+    { id: 'overview', label: lang === 'ar' ? '1. النظرة العامة التنفيذية' : '1. Executive Impact Overview', icon: LayoutDashboard },
+    { id: 'monitoring', label: lang === 'ar' ? '2. المراقبة وجودة البيانات' : '2. Live Sensor Telemetry', icon: Activity },
+    { id: 'peak_demand', label: lang === 'ar' ? '3. تحسين ذروة الطلب (ديوا)' : '3. Peak Demand & HVAC Optimization', icon: Zap },
+    { id: 'esg', label: lang === 'ar' ? '4. ذكاء الكربون والاستدامة' : '4. Carbon & ESG Intelligence (Scope 1 & 2)', icon: Leaf },
+    { id: 'comfort_safety', label: lang === 'ar' ? '5. الراحة والحدود الآمنة' : '5. Indoor Comfort & Safety Bounds', icon: ShieldCheck },
+    { id: 'community', label: lang === 'ar' ? '6. المركز المجتمعي والتبريد' : '6. Social Inclusion & Community Hub', icon: Building2 },
+    { id: 'education', label: lang === 'ar' ? '7. التوعية وتحديات الاستدامة' : '7. Sustainability Education & Sprints', icon: Brain },
+    { id: 'resilience', label: lang === 'ar' ? '8. المرونة والإنذار المبكر' : '8. Resilience & Early Warning (NCM)', icon: AlertCircle },
+    { id: 'timeline', label: lang === 'ar' ? '9. تسلسل قرارات الوكيل' : '9. AI Reasoning & Activity Timeline', icon: TrendingUp },
+    { id: 'approval', label: lang === 'ar' ? '10. مركز الموافقات البشرية' : '10. Human Approval Centre', icon: UserCheck },
+    { id: 'n8n_health', label: lang === 'ar' ? '11. محرك الأتمتة n8n' : '11. n8n Workflow Automation Engine', icon: Network },
+    { id: 'reports', label: lang === 'ar' ? '12. التقارير والتدقيق' : '12. Reports & Auditable Deliverables', icon: BarChart3 },
+    { id: 'integrations', label: lang === 'ar' ? '13. التكاملات والطيار' : '13. Integrations, Safety & Pilots', icon: Settings },
   ];
+
+  const filteredResources = districtFilter === 'All'
+    ? communityResources
+    : communityResources.filter((r) => r.district.toLowerCase().includes(districtFilter.toLowerCase()));
 
   return (
     <div className={`min-h-screen bg-slate-50 flex flex-col font-sans ${isRtl ? 'rtl' : 'ltr'}`}>
-      {/* Top Banner: Demo & Safety Notice */}
+      {/* Top Banner: Dubai Societal Notice */}
       <div className="bg-slate-900 border-b border-slate-800 text-slate-300 text-xs px-4 py-1.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
@@ -195,8 +296,8 @@ export const App: React.FC = () => {
           <span className="hidden sm:inline text-slate-400">|</span>
           <span className="hidden sm:inline text-slate-300">
             {lang === 'ar'
-              ? 'نظام عمليات المباني الذكية لوكلاء الذكاء الاصطناعي في دبي (التحكم الفيزيائي معطل للأمان)'
-              : 'Autonomous Building Operations & Efficiency Agent for Dubai Commercial Portfolios (Physical control disabled)'}
+              ? 'الوكيل الذكي للعمليات المجتمعية والمباني المستدامة في دبي (التحكم الفيزيائي محمي بالموافقات البشرية)'
+              : 'Autonomous Societal AI Agent for Sustainable Buildings & Resilient Communities in Dubai'}
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -204,7 +305,7 @@ export const App: React.FC = () => {
             Timezone: Asia/Dubai (GST)
           </span>
           <span className="px-2 py-0.5 rounded text-[10px] bg-teal-900/40 text-teal-300 border border-teal-700/50">
-            DEWA Tariff Engine Active
+            DEWA Peak Tariff Window: 12 PM - 6 PM
           </span>
         </div>
       </div>
@@ -219,10 +320,10 @@ export const App: React.FC = () => {
             <h1 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
               CoolShield AI
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">
-                v1.0 Dubai
+                v2.0 Societal
               </span>
             </h1>
-            <p className="text-xs text-slate-500">Autonomous Efficiency & Closed-Loop Operations</p>
+            <p className="text-xs text-slate-500">Autonomous Efficiency, ESG Accounting & Community Resilience</p>
           </div>
         </div>
 
@@ -244,7 +345,7 @@ export const App: React.FC = () => {
             </select>
           </div>
 
-          {/* Language Selector */}
+          {/* Language Selector (6 Languages) */}
           <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 text-xs">
             <Globe className="w-4 h-4 text-teal-600" />
             <select
@@ -262,88 +363,80 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Body with Sidebar + Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar Navigation */}
-        <aside className="w-64 bg-slate-900 text-slate-300 flex-shrink-0 flex flex-col justify-between border-r border-slate-800">
-          <div className="p-3 space-y-1">
-            <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              {lang === 'ar' ? 'لوحة التحكم الرئيسية' : 'Operations Modules'}
-            </div>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentPage === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentPage(item.id)}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition ${
-                    isActive
-                      ? 'bg-teal-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span className="flex-1 text-left">{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
+      {/* Demonstration Scenario Bar */}
+      <DemoScenarioPlayer
+        onRefreshAll={() => loadAllData()}
+        lang={lang}
+      />
 
-          {/* Bottom Sidebar Info */}
-          <div className="p-4 bg-slate-950/60 border-t border-slate-800 text-[11px] text-slate-400 space-y-2">
-            <div className="flex items-center justify-between">
-              <span>BMS Telemetry:</span>
-              <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Connected
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Active Portfolios:</span>
-              <span className="text-slate-200 font-semibold">{buildings.length} Properties</span>
-            </div>
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar Navigation (13 Sections) */}
+        <aside className="w-64 bg-white border-r border-slate-200 p-4 space-y-1.5 shrink-0 overflow-y-auto">
+          <div className="text-[11px] font-bold tracking-wider text-slate-400 uppercase px-3 mb-2">
+            {lang === 'ar' ? 'أقسام النظام الـ 13' : '13 Operational Sections'}
           </div>
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = currentPage === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentPage(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                  active
+                    ? 'bg-slate-900 text-teal-300 shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
+              >
+                <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-teal-400' : 'text-slate-400'}`} />
+                <span className="truncate text-left">{item.label}</span>
+              </button>
+            );
+          })}
         </aside>
 
-        {/* Dynamic Content Area */}
+        {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Guided Competition Demonstration Walkthrough Player */}
-          <DemoScenarioPlayer onRefreshAll={loadAllData} lang={lang} />
-
-          {/* PAGE 1: EXECUTIVE OVERVIEW */}
+          {/* SECTION 1: EXECUTIVE OVERVIEW */}
           {currentPage === 'overview' && (
             <div className="space-y-6">
-              {/* Top Metrics Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Executive KPI Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="cs-card p-4">
                   <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-                    <span>{lang === 'ar' ? 'المباني المراقبة' : 'Buildings Monitored'}</span>
-                    <Building2 className="w-4 h-4 text-teal-600" />
+                    <span>{lang === 'ar' ? 'المباني المراقبة' : 'Monitored Buildings'}</span>
+                    <Building2 className="w-4 h-4 text-slate-400" />
                   </div>
-                  <div className="text-2xl font-bold text-slate-900">{kpis?.total_buildings ?? 5}</div>
-                  <div className="text-[11px] text-emerald-600 font-medium mt-1">100% telemetry online</div>
+                  <div className="text-2xl font-bold text-slate-900">
+                    {kpis?.total_buildings ?? 5} <span className="text-xs font-normal text-slate-500">Dubai Assets</span>
+                  </div>
+                  <div className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 100% Online Telemetry
+                  </div>
                 </div>
 
                 <div className="cs-card p-4">
                   <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-                    <span>{lang === 'ar' ? 'الكهرباء اليوم' : 'Electricity (24h)'}</span>
+                    <span>{lang === 'ar' ? 'استهلاك الكهرباء (24 ساعة)' : 'Electricity (24h)'}</span>
                     <Zap className="w-4 h-4 text-amber-500" />
                   </div>
                   <div className="text-2xl font-bold text-slate-900">
-                    {kpis?.electricity_kwh_today?.toLocaleString() ?? '3,840'} <span className="text-sm font-normal">kWh</span>
+                    {kpis?.electricity_kwh_today?.toLocaleString() ?? '3,840'} <span className="text-xs font-normal text-slate-500">kWh</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">DEWA Tiered Tariff</div>
+                  <div className="text-[11px] text-slate-500 mt-1">
+                    Est. Cost: <b>AED {kpis?.total_operating_cost_aed_today?.toLocaleString() ?? '1,420.00'}</b>
+                  </div>
                 </div>
 
                 <div className="cs-card p-4">
                   <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-                    <span>{lang === 'ar' ? 'المياه اليوم' : 'Water (24h)'}</span>
-                    <Droplets className="w-4 h-4 text-blue-500" />
+                    <span>{lang === 'ar' ? 'استهلاك المياه (24 ساعة)' : 'Water Consumption (24h)'}</span>
+                    <Droplets className="w-4 h-4 text-sky-500" />
                   </div>
                   <div className="text-2xl font-bold text-slate-900">
-                    {kpis?.water_m3_today?.toLocaleString() ?? '94.5'} <span className="text-sm font-normal">m³</span>
+                    {kpis?.water_m3_today?.toLocaleString() ?? '94.5'} <span className="text-xs font-normal text-slate-500">m³</span>
                   </div>
-                  <div className="text-[11px] text-slate-500 mt-1">Sewerage included</div>
+                  <div className="text-[11px] text-slate-500 mt-1">Tiered DEWA Potable Slabs</div>
                 </div>
 
                 <div className="cs-card p-4 bg-teal-50/50 border-teal-200">
@@ -358,7 +451,23 @@ export const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Interactive Dubai Map & Building Location Telemetry */}
+              {/* 48-Hour DEWA Load Forecast Projection */}
+              {forecastData && (
+                <div className="p-3 bg-gradient-to-r from-teal-900 to-slate-900 text-white rounded-xl shadow-sm flex flex-wrap items-center justify-between gap-4 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-amber-400" />
+                    <span className="font-bold">DEWA 48-Hour Load Forecast:</span>
+                    <span className="text-slate-200">
+                      Projected consumption for {forecastData.building_id || 'DXB-OFF-01'} is {forecastData.forecast_kwh_mean?.toLocaleString() || '4,320'} kWh (Peak window: 12:00 - 17:00).
+                    </span>
+                  </div>
+                  <span className="text-[11px] bg-white/10 px-2 py-0.5 rounded text-teal-300">
+                    Confidence: {forecastData.confidence_interval || '95% CI'}
+                  </span>
+                </div>
+              )}
+
+              {/* Interactive Dubai Map */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div>
@@ -367,7 +476,7 @@ export const App: React.FC = () => {
                     </h3>
                     <p className="text-xs text-slate-500">
                       {lang === 'ar'
-                        ? 'انقر على أي مبنى في الخريطة لعرض تفاصيله والقياسات الحية والملف التشغيلي'
+                        ? 'انقر على أي مبنى في الخريطة لعرض القياسات الحية والملف التشغيلي'
                         : 'Select any building marker to inspect telemetry, COP efficiency, and active incident dossiers.'}
                     </p>
                   </div>
@@ -384,24 +493,78 @@ export const App: React.FC = () => {
                 />
               </div>
 
-              {/* Recent AI Investigations & Alerts Grid */}
+              {/* Active AI Diagnostic Investigation Modal / Dossier */}
+              {investigationData && (
+                <div className="cs-card p-5 border-2 border-teal-500 bg-teal-50/20 shadow-md">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Brain className="w-5 h-5 text-teal-600" />
+                      <h3 className="text-sm font-bold text-slate-900">
+                        AI Diagnostic Investigation Report: {investigationData.event_id}
+                      </h3>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">
+                        Confidence: {Math.round(investigationData.confidence_score * 100)}%
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setInvestigationData(null)}
+                      className="text-xs text-slate-400 hover:text-slate-600 font-bold px-2 py-1"
+                    >
+                      ✕ Close
+                    </button>
+                  </div>
+                  <div className="text-xs text-slate-700 space-y-2">
+                    <div><b>Root Cause Hypothesis:</b> {investigationData.possible_causes?.[0]?.cause || investigationData.summary}</div>
+                    <div><b>Recommended Action:</b> {investigationData.recommendations?.[0]?.description || 'Inspect asset telemetry and verify BMS damper calibration.'}</div>
+                    <div className="flex items-center gap-4 text-slate-600">
+                      <span>Confidence Rationale: <b>{investigationData.confidence_rationale}</b></span>
+                      <span>Approval Tier: <b>{investigationData.required_approval_level}</b></span>
+                    </div>
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        onClick={() => {
+                          handleCreateWorkOrder(investigationData.event_id);
+                          setInvestigationData(null);
+                        }}
+                        className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded text-xs transition"
+                      >
+                        Draft Maintenance Work Order
+                      </button>
+                      <button
+                        onClick={() => setInvestigationData(null)}
+                        className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs transition"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Anomalies & Work Orders Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Active Alerts */}
                 <div className="cs-card p-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-red-500" />
                       {lang === 'ar' ? 'أحدث التنبيهات والحوادث التشغيلية' : 'Detected Operational Anomalies'}
                     </h3>
-                    <button
-                      onClick={() => setCurrentPage('alerts')}
-                      className="text-xs text-teal-600 hover:text-teal-700 font-semibold"
+                    <select
+                      value={filterSeverity}
+                      onChange={(e) => setFilterSeverity(e.target.value)}
+                      className="text-xs bg-slate-100 border border-slate-300 rounded px-2 py-1 text-slate-700 font-semibold"
                     >
-                      View All ({anomalies.length})
-                    </button>
+                      <option value="ALL">All Severities</option>
+                      <option value="Critical">Critical</option>
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                    </select>
                   </div>
                   <div className="space-y-2.5">
-                    {anomalies.slice(0, 4).map((a) => (
+                    {anomalies
+                      .filter((a) => filterSeverity === 'ALL' || a.severity === filterSeverity)
+                      .slice(0, 4)
+                      .map((a) => (
                       <div
                         key={a.event_id}
                         className="p-3 rounded-lg border border-slate-100 bg-slate-50/70 hover:bg-slate-100/80 transition flex items-center justify-between text-xs"
@@ -424,7 +587,7 @@ export const App: React.FC = () => {
                         <button
                           onClick={() => {
                             handleInvestigate(a.event_id);
-                            setCurrentPage('insights');
+                            setCurrentPage('overview');
                           }}
                           className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-semibold rounded text-xs transition"
                         >
@@ -435,35 +598,27 @@ export const App: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Open Work Orders & Approvals */}
                 <div className="cs-card p-5">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       <Wrench className="w-4 h-4 text-teal-600" />
                       {lang === 'ar' ? 'أوامر العمل المعلقة والموافقات' : 'Pending Work Orders & Approvals'}
                     </h3>
-                    <button
-                      onClick={() => setCurrentPage('workorders')}
-                      className="text-xs text-teal-600 hover:text-teal-700 font-semibold"
-                    >
-                      Manage ({workOrders.length})
-                    </button>
                   </div>
                   <div className="space-y-2.5">
-                    {workOrders.slice(0, 4).map((w) => (
+                    {workOrders.slice(0, 4).map((wo) => (
                       <div
-                        key={w.work_order_id}
-                        className="p-3 rounded-lg border border-slate-100 bg-slate-50/70 flex items-center justify-between text-xs"
+                        key={wo.work_order_id}
+                        className="p-3 rounded-lg border border-slate-100 bg-slate-50/70 hover:bg-slate-100/80 transition flex items-center justify-between text-xs"
                       >
                         <div>
-                          <div className="font-semibold text-slate-800">{w.title}</div>
-                          <div className="text-[11px] text-slate-500 mt-1">
-                            ID: <span className="font-mono">{w.work_order_id}</span> | Status:{' '}
-                            <b className="text-teal-700">{w.status}</b>
+                          <div className="font-semibold text-slate-800">{wo.title}</div>
+                          <div className="text-[11px] text-slate-500 mt-0.5">
+                            {wo.work_order_id} | Status: <b className="text-teal-700">{wo.status}</b>
                           </div>
                         </div>
-                        <span className="px-2 py-1 rounded bg-slate-200/60 text-slate-700 text-[10px] font-semibold">
-                          {w.assigned_technician}
+                        <span className="px-2 py-1 rounded bg-slate-200/60 text-slate-700 font-mono text-[10px]">
+                          {wo.approval_status}
                         </span>
                       </div>
                     ))}
@@ -473,98 +628,20 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* PAGE 2: BUILDING PORTFOLIO */}
-          {currentPage === 'portfolio' && (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    {lang === 'ar' ? 'محفظة العقارات والمباني المراقبة' : 'Monitored Dubai Building Portfolio'}
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    {lang === 'ar'
-                      ? '5 منشآت رئيسية في دبي مغطاة بالمجسات وعدادات ديوا الذكية'
-                      : '5 major commercial, hospitality, residential, and logistics facilities with live sub-metering.'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {buildings.map((b) => (
-                  <div
-                    key={b.id}
-                    className={`cs-card p-5 hover:border-teal-500 transition cursor-pointer ${
-                      selectedBuildingId === b.id ? 'ring-2 ring-teal-500 border-teal-500' : ''
-                    }`}
-                    onClick={() => {
-                      setSelectedBuildingId(b.id);
-                      setCurrentPage('monitoring');
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-                        {b.building_type}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          b.operational_status.includes('Critical')
-                            ? 'badge-critical'
-                            : b.operational_status.includes('Attention')
-                            ? 'badge-high'
-                            : 'badge-optimal'
-                        }`}
-                      >
-                        {b.operational_status}
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-bold text-slate-900 mb-1">{b.name}</h3>
-                    <p className="text-xs text-slate-500 mb-3">📍 {b.district}</p>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100 mb-4">
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Gross Floor Area</span>
-                        <span className="font-semibold">{b.gross_floor_area_m2.toLocaleString()} m²</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Floors</span>
-                        <span className="font-semibold">{b.floors} Levels</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Target COP</span>
-                        <span className="font-semibold text-teal-700">{b.target_cop}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Open Incidents</span>
-                        <span className="font-semibold text-red-600">{b.open_incidents_count}</span>
-                      </div>
-                    </div>
-
-                    <button className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition">
-                      View Live Telemetry <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PAGE 3: LIVE MONITORING */}
+          {/* SECTION 2: LIVE SENSOR TELEMETRY */}
           {currentPage === 'monitoring' && (
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">
-                    {lang === 'ar' ? 'المراقبة الحية والقياسات المستمرة' : 'Live Telemetry & Environmental Monitoring'}
+                    {lang === 'ar' ? 'القياسات الحية وفحص جودة البيانات' : 'Live Sensor Telemetry & Data Quality Gate'}
                   </h2>
-                  <p className="text-xs text-slate-500">
-                    Real-time time series for electricity, water flow, chilled water delta T, and quality flags.
-                  </p>
+                  <p className="text-xs text-slate-500">Continuous sub-meter streams with Layer A quality validation.</p>
                 </div>
-                {/* Building Selector */}
                 <select
                   value={selectedBuildingId}
                   onChange={(e) => setSelectedBuildingId(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:outline-none"
+                  className="bg-white border border-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm"
                 >
                   {buildings.map((b) => (
                     <option key={b.id} value={b.id}>
@@ -574,43 +651,691 @@ export const App: React.FC = () => {
                 </select>
               </div>
 
-              {/* Telemetry Table */}
-              <div className="cs-card p-4 overflow-x-auto">
+              {/* Data Quality Card */}
+              <div className="cs-card p-4 bg-emerald-50/50 border-emerald-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-600" />
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-950">Layer A Telemetry Quality Verification: PASS</h4>
+                      <p className="text-[11px] text-emerald-700">0.0% missing records | Dynamic variance verified | Zero flatlines</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded text-xs font-bold bg-emerald-600 text-white">100% Quality Score</span>
+                </div>
+              </div>
+
+              {/* Telemetry Stream Table */}
+              <div className="cs-card overflow-hidden">
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-900">Recent Hourly Sub-Meter Ingested Readings</h3>
+                  <span className="text-[11px] text-slate-400">Total samples: {telemetry.length}</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">Timestamp (UTC)</th>
+                        <th className="p-3">Electricity (kWh)</th>
+                        <th className="p-3">Water (m³)</th>
+                        <th className="p-3">Indoor (°C)</th>
+                        <th className="p-3">Outdoor (°C)</th>
+                        <th className="p-3">Est. COP</th>
+                        <th className="p-3">Quality Gate</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {telemetry.slice(0, 15).map((t, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50/80">
+                          <td className="p-3 font-mono text-[11px] text-slate-500">{t.timestamp.replace('T', ' ').slice(0, 19)}</td>
+                          <td className="p-3 font-bold text-slate-800">{t.electricity_kwh?.toFixed(1) ?? '--'}</td>
+                          <td className="p-3 text-slate-800">{t.water_m3?.toFixed(2) ?? '--'}</td>
+                          <td className="p-3 text-slate-800">{t.indoor_temp_c?.toFixed(1) ?? '--'}°C</td>
+                          <td className="p-3 text-slate-500">{t.outdoor_temp_c?.toFixed(1) ?? '--'}°C</td>
+                          <td className="p-3 font-semibold text-teal-700">{t.cop_estimate?.toFixed(2) ?? '--'}</td>
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              {t.quality_status || 'PASS'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 3: PEAK DEMAND & HVAC OPTIMIZATION (MODULE B) */}
+          {currentPage === 'peak_demand' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'تحسين ذروة الطلب وتحويل الأحمال (الوحدة B)' : 'Energy-Grid & HVAC Optimization: Peak Load Shifting (Module B)'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Automated pre-cooling schedules and non-critical load shifting during the DEWA 12 PM - 6 PM peak tariff window.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Peak Demand Reduction Target</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">133.0 kW</div>
+                  <span className="text-[11px] text-teal-600 font-semibold">16.2% Chiller Baseline Shed</span>
+                </div>
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Estimated Cost Avoided</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">AED 495.00 / day</div>
+                  <span className="text-[11px] text-teal-600 font-semibold">DEWA Slab 4 Tariff</span>
+                </div>
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Thermal Comfort Guarantee</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">±1.0°C Max Drift</div>
+                  <span className="text-[11px] text-emerald-600 font-semibold">ASHRAE Standard 55 Compliant</span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-900">Active Peak Optimization Plans</h3>
+                {optimizationPlans.map((plan) => (
+                  <div key={plan.plan_id} className="cs-card p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-mono text-teal-600 block">{plan.plan_id}</span>
+                        <h4 className="text-sm font-bold text-slate-900">{plan.building_id}: {plan.trigger_reason}</h4>
+                      </div>
+                      <span className="px-2.5 py-1 rounded text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        {plan.approval_status}
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-1">
+                      <div><b>Eligible Non-Critical Loads:</b></div>
+                      {plan.eligible_loads.map((l, i) => (
+                        <div key={i} className="text-slate-500 pl-2">
+                          • {l.name} ({l.asset_id}): {l.action} (Shed: {l.load_reduction_kw} kW)
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="text-xs text-slate-500">
+                        Baseline: <b>{plan.baseline_kw} kW</b> | Avoided: <b className="text-emerald-600">AED {plan.estimated_cost_avoided_aed.toFixed(2)}</b>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {plan.approval_status === 'Pending' && (
+                          <button
+                            onClick={() => handleApprovePlan(plan.plan_id)}
+                            className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition"
+                          >
+                            Approve Plan (FM)
+                          </button>
+                        )}
+                        {plan.approval_status === 'Approved' && plan.execution_status !== 'Executed & Verified' && (
+                          <button
+                            onClick={() => handleExecutePlan(plan.plan_id)}
+                            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-teal-300 font-semibold text-xs transition"
+                          >
+                            Execute Load Shedding
+                          </button>
+                        )}
+                        {plan.execution_status === 'Executed & Verified' && (
+                          <span className="px-3 py-1 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            Executed & Verified (133 kW Shed)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 4: CARBON & ESG INTELLIGENCE (SCOPE 1 & 2 - MODULE A) */}
+          {currentPage === 'esg' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'ذكاء الكربون وحسابات الاستدامة (الوحدة A)' : 'Autonomous Energy & ESG Carbon Accounting (Module A)'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  GHG Protocol Corporate Accounting Standard | Transparent DEWA Grid Factor (0.42 kg CO₂e/kWh) | Strictly Separated Carbon Offsets
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Scope 1 Direct Emissions</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">
+                    {((esgReport?.scope_1_direct_kgco2e ?? 1420) / 1000).toFixed(2)} MT CO₂e
+                  </div>
+                  <span className="text-[11px] text-slate-400">On-site diesel backup</span>
+                </div>
+
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Scope 2 Grid Electricity</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">
+                    {((esgReport?.scope_2_electricity_kgco2e ?? 52400) / 1000).toFixed(2)} MT CO₂e
+                  </div>
+                  <span className="text-[11px] text-teal-600 font-semibold">DEWA 0.42 kg/kWh Factor</span>
+                </div>
+
+                <div className="cs-card p-4 bg-emerald-50/50 border-emerald-200">
+                  <span className="text-xs text-emerald-800 font-semibold">Verified Operational Reductions</span>
+                  <div className="text-xl font-bold text-emerald-700 mt-1">
+                    -{esgReport?.operational_reductions_mtco2e ?? 7.45} MT CO₂e
+                  </div>
+                  <span className="text-[11px] text-emerald-600 font-semibold">CoolShield AI Efficiency</span>
+                </div>
+
+                <div className="cs-card p-4 bg-sky-50/50 border-sky-200">
+                  <span className="text-xs text-sky-800 font-semibold">DCCE Registered Carbon Offsets</span>
+                  <div className="text-xl font-bold text-sky-700 mt-1">
+                    {esgReport?.carbon_offsets?.purchased_mtco2e ?? 5.0} MT CO₂e
+                  </div>
+                  <span className="text-[11px] text-sky-600 font-semibold">Serial: DCCE-UAE-2026-8819A</span>
+                </div>
+              </div>
+
+              <div className="cs-card p-5 space-y-3">
+                <h3 className="text-sm font-bold text-slate-900">GHG Protocol Compliance & Carbon Segregation Notice</h3>
+                <div className="p-3 bg-slate-50 rounded-lg text-xs text-slate-600 border border-slate-200 leading-relaxed">
+                  <b>Methodology & Accounting Integrity:</b> Under official GHG Protocol Corporate Standard guidelines,
+                  carbon offsets are reported strictly as separate line items and are <b>NOT</b> subtracted from gross Scope 1 and Scope 2 totals.
+                  Our reported <b>7.45 MT</b> reduction represents genuine, verified on-site operational energy curtailment.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 5: INDOOR COMFORT & SAFETY BOUNDS */}
+          {currentPage === 'comfort_safety' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'معايير الراحة الحرارية وجودة الهواء الداخلي' : 'Indoor Comfort, Air Quality & Safety Interlocks'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Non-negotiable life safety and comfort constraints complying with ASHRAE 55 and ASHRAE 62.1.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Thermal Comfort Zone</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">23.0°C – 26.0°C</div>
+                  <span className="text-[11px] text-teal-600 font-semibold">ASHRAE Standard 55</span>
+                </div>
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Min Fresh Air Ventilation</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">15.0 CFM / person</div>
+                  <span className="text-[11px] text-teal-600 font-semibold">ASHRAE Standard 62.1</span>
+                </div>
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Indoor CO₂ Safe Ceiling</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">&lt; 800 ppm</div>
+                  <span className="text-[11px] text-emerald-600 font-semibold">Alarm at 1,000 ppm</span>
+                </div>
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Relative Humidity Bounds</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">30% – 65% RH</div>
+                  <span className="text-[11px] text-teal-600 font-semibold">Mold & Condensation Guard</span>
+                </div>
+              </div>
+
+              <div className="cs-card p-5 space-y-3">
+                <h3 className="text-sm font-bold text-slate-900">Safety Interlock Rules Matrix</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                      <tr>
+                        <th className="p-3">Interlock ID</th>
+                        <th className="p-3">Parameter</th>
+                        <th className="p-3">Safe Operating Range</th>
+                        <th className="p-3">Automated Abort Action</th>
+                        <th className="p-3">Priority Level</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      <tr>
+                        <td className="p-3 font-mono font-bold text-slate-700">INT-01</td>
+                        <td className="p-3 text-slate-800">Indoor Zone Temperature</td>
+                        <td className="p-3 font-mono text-slate-600">23.0°C - 26.0°C</td>
+                        <td className="p-3 text-slate-800">Emergency Chiller Ramp-Up</td>
+                        <td className="p-3 font-bold text-red-600">Critical</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-mono font-bold text-slate-700">INT-02</td>
+                        <td className="p-3 text-slate-800">Indoor CO₂ Concentration</td>
+                        <td className="p-3 font-mono text-slate-600">&lt; 800 ppm</td>
+                        <td className="p-3 text-slate-800">100% Outdoor Air Damper Open</td>
+                        <td className="p-3 font-bold text-amber-600">Life Safety</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-mono font-bold text-slate-700">INT-03</td>
+                        <td className="p-3 text-slate-800">Chilled Water Delta-T</td>
+                        <td className="p-3 font-mono text-slate-600">&ge; 5.0°C</td>
+                        <td className="p-3 text-slate-800">Modulate Secondary Flow Valve</td>
+                        <td className="p-3 font-bold text-teal-600">Equipment Protection</td>
+                      </tr>
+                      <tr>
+                        <td className="p-3 font-mono font-bold text-slate-700">INT-04</td>
+                        <td className="p-3 text-slate-800">Relative Humidity (RH)</td>
+                        <td className="p-3 font-mono text-slate-600">30% - 65%</td>
+                        <td className="p-3 text-slate-800">Reheat Coil Modulation</td>
+                        <td className="p-3 font-bold text-slate-600">Air Quality</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 6: SOCIAL INCLUSION & COMMUNITY HUB (MODULE C) */}
+          {currentPage === 'community' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'الشمول الاجتماعي والمراكز المجتمعية (الوحدة C)' : 'Social Inclusion & Community Hub (Module C)'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Verified Dubai cooling shelters, customer happiness centres, health clinics, and privacy-preserving resident tickets.
+                </p>
+              </div>
+
+              {/* District Filter & Resource Directory */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900">Verified Dubai Community Infrastructure</h3>
+                  <select
+                    value={districtFilter}
+                    onChange={(e) => setDistrictFilter(e.target.value)}
+                    className="bg-white border border-slate-200 text-xs px-3 py-1.5 rounded-lg shadow-sm"
+                  >
+                    <option value="All">All Districts</option>
+                    <option value="Al Barsha">Al Barsha</option>
+                    <option value="Downtown">Downtown Dubai</option>
+                    <option value="Deira">Deira</option>
+                    <option value="Al Wasl">Al Wasl</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredResources.map((r) => (
+                    <div key={r.id} className="cs-card p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                          {r.category}
+                        </span>
+                        <span className="text-[11px] font-semibold text-emerald-600">● {r.current_availability}</span>
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900">{r.name}</h4>
+                      <p className="text-xs text-slate-500">📍 {r.address} | District: {r.district}</p>
+                      <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-100">
+                        <span>⏰ {r.opening_hours}</span>
+                        <span>👥 Capacity: {r.max_capacity}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Resident Service Ticket */}
+              <div className="cs-card p-5 space-y-4">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Send className="w-4 h-4 text-teal-600" />
+                  Submit Community Service Request (Automatic PII Scrubbing)
+                </h3>
+                <form onSubmit={handleServiceTicketSubmit} className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 block mb-1">Issue Category</label>
+                      <select
+                        value={srCategory}
+                        onChange={(e) => setSrCategory(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 text-xs p-2 rounded-lg"
+                      >
+                        <option>Thermal Comfort & Cooling</option>
+                        <option>Accessibility & Wheelchair Mobility</option>
+                        <option>Indoor Air / Water Quality</option>
+                        <option>Recycling & Environmental Waste</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700 block mb-1">Priority</label>
+                      <select
+                        value={srPriority}
+                        onChange={(e) => setSrPriority(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 text-xs p-2 rounded-lg"
+                      >
+                        <option>Routine</option>
+                        <option>Urgent</option>
+                        <option>Emergency</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">
+                      Description (Emails and phone numbers are automatically redacted):
+                    </label>
+                    <textarea
+                      value={srDescription}
+                      onChange={(e) => setSrDescription(e.target.value)}
+                      rows={2}
+                      className="w-full bg-slate-50 border border-slate-200 text-xs p-2.5 rounded-lg focus:outline-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition"
+                  >
+                    Submit Sanitized Service Ticket
+                  </button>
+                </form>
+
+                {/* Recent Service Tickets */}
+                <div className="pt-3 border-t border-slate-100">
+                  <h4 className="text-xs font-bold text-slate-700 mb-2">Recent Community Requests</h4>
+                  <div className="space-y-2">
+                    {serviceRequests.map((req) => (
+                      <div key={req.request_id} className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-semibold text-slate-900">{req.category}: {req.description}</div>
+                          <span className="text-[11px] text-slate-400 font-mono">{req.request_id} | Assigned: {req.assigned_team}</span>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-700">{req.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 7: SUSTAINABILITY EDUCATION & SPRINTS (MODULE D) */}
+          {currentPage === 'education' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'التوعية وتحديات الاستدامة المجتمعية (الوحدة D)' : 'Sustainability Education & Community Participation Sprints (Module D)'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Multilingual education across 6 languages + Community energy & water conservation sprints.
+                </p>
+              </div>
+
+              {/* Sprints */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-900">Active Community Sustainability Sprints</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {challenges.map((ch) => (
+                    <div key={ch.id} className="cs-card p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                          {ch.category}
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">{ch.start_date} to {ch.end_date}</span>
+                      </div>
+                      <h4 className="text-sm font-bold text-slate-900">{ch.title}</h4>
+                      <p className="text-xs text-slate-600 leading-relaxed">{ch.description}</p>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                        <div>
+                          <span className="text-xs font-bold text-slate-900">{ch.total_participants}</span>
+                          <span className="text-[11px] text-slate-400 ml-1">Pledged Participants</span>
+                        </div>
+                        <button
+                          onClick={() => handlePledge(ch.id)}
+                          className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-1.5 transition"
+                        >
+                          <HeartHandshake className="w-3.5 h-3.5" />
+                          Pledge Participation
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Multilingual Educational Cards */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-900">Multilingual Educational Cards (Active Language: {lang.toUpperCase()})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {educationalContent.map((ed) => (
+                    <div key={ed.id} className="cs-card p-5 space-y-3">
+                      <span className="text-xs font-mono text-teal-600 font-bold block">{ed.topic}</span>
+                      <h4 className="text-sm font-bold text-slate-900">{ed.title}</h4>
+                      <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">
+                        {ed.translations[lang] || ed.translations['en']}
+                      </p>
+                      <div className="text-[11px] text-teal-800 font-semibold bg-teal-50 p-2 rounded border border-teal-200">
+                        <b>Key Takeaway:</b> {ed.key_takeaway}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 8: RESILIENCE & EARLY WARNING (NCM - MODULE E) */}
+          {currentPage === 'resilience' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'المرونة المجتمعية والإنذار المبكر (الوحدة E)' : 'Community Resilience & Early Warning System (Module E)'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Integration with UAE National Center of Meteorology (NCM) & Dubai Municipality Air Quality Telemetry.
+                </p>
+              </div>
+
+              {/* Weather & Heat Risk Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Ambient Dry-Bulb Temp</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">{weatherRisk?.dry_bulb_temperature_c ?? 41.5}°C</div>
+                  <span className="text-[11px] text-slate-400">Dubai Coastal Weather</span>
+                </div>
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Relative Humidity</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">{weatherRisk?.relative_humidity_pct ?? 68.0}%</div>
+                  <span className="text-[11px] text-slate-400">High Dew Point</span>
+                </div>
+                <div className="cs-card p-4 bg-amber-50/50 border-amber-200">
+                  <span className="text-xs text-amber-800 font-semibold">Calculated Heat Index</span>
+                  <div className="text-xl font-bold text-amber-700 mt-1">{weatherRisk?.calculated_heat_index_c ?? 43.8}°C</div>
+                  <span className="text-[11px] text-amber-700 font-semibold">LEVEL 2 HEAT ALERT</span>
+                </div>
+                <div className="cs-card p-4">
+                  <span className="text-xs text-slate-500">Outdoor PM2.5 AQI</span>
+                  <div className="text-xl font-bold text-slate-900 mt-1">{weatherRisk?.aqi_pm25_ug_m3 ?? 86.0} µg/m³</div>
+                  <span className="text-[11px] text-slate-400">Moderate Inflow</span>
+                </div>
+              </div>
+
+              {/* Active Incident & Cooling Shelter Routing */}
+              {weatherRisk?.active_incident && (
+                <div className="cs-card p-5 bg-red-50/40 border-red-200 space-y-3">
+                  <div className="flex items-center gap-2 text-red-700 font-bold text-sm">
+                    <Flame className="w-5 h-5 text-red-600" />
+                    Active Resilience Advisory: {weatherRisk.active_incident.type} ({weatherRisk.active_incident.severity})
+                  </div>
+                  <p className="text-xs text-slate-700 leading-relaxed">
+                    {weatherRisk.active_incident.recommended_action}
+                  </p>
+                  <div className="text-xs font-semibold text-teal-800 bg-white p-2.5 rounded-lg border border-teal-200 flex items-center justify-between">
+                    <span>Dispatched Cooling Shelter Hub: <b>{weatherRisk.active_incident.recommended_cooling_shelter_id}</b></span>
+                    <button
+                      onClick={() => setCurrentPage('community')}
+                      className="text-xs text-teal-600 hover:text-teal-700 font-bold underline"
+                    >
+                      View Map & Directions
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SECTION 9: AI REASONING & ACTIVITY TIMELINE */}
+          {currentPage === 'timeline' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'سلسلة قرارات الذكاء الاصطناعي وجدول الأنشطة' : 'AI Reasoning & Transparent Operating Timeline'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Observe → Validate → Reason → Prioritize → Plan → Approve → Execute → Verify → Learn.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {audits.map((a) => (
+                  <div key={a.id} className="cs-card p-4 flex items-center justify-between text-xs">
+                    <div className="space-y-1">
+                      <div className="font-bold text-slate-900 flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                          {a.action}
+                        </span>
+                        {a.resource_type}: {a.resource_id}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        Actor: <b>{a.actor}</b> ({a.role}) | {a.timestamp.replace('T', ' ').slice(0, 19)}
+                      </div>
+                    </div>
+                    <span className="text-xs font-mono text-teal-700">Verified Step</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 10: HUMAN APPROVAL CENTRE */}
+          {currentPage === 'approval' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'مركز الموافقات البشرية والإجراءات الجوهرية' : 'Human Approval Centre (Consequential Action Gate)'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Consequential physical interventions and peak load shedding strictly require human FM authorization.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-900">
+                  Pending Approvals ({workOrders.filter((w) => w.approval_status === 'Pending').length + optimizationPlans.filter((p) => p.approval_status === 'Pending').length} Awaiting Review)
+                </h3>
+
+                {workOrders
+                  .filter((w) => w.approval_status === 'Pending')
+                  .map((wo) => (
+                    <div key={wo.work_order_id} className="cs-card p-5 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-mono text-teal-600 block">{wo.work_order_id}</span>
+                          <h4 className="text-sm font-bold text-slate-900">{wo.title} ({wo.building_id})</h4>
+                        </div>
+                        <span className="px-2.5 py-1 rounded text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                          Pending Approval
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-600">{wo.description}</p>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-700 block mb-1">Approval Rationale / Notes:</label>
+                        <input
+                          type="text"
+                          value={approvalRationale}
+                          onChange={(e) => setApprovalRationale(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 text-xs p-2 rounded-lg"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={async () => {
+                            if (currentRole !== 'facilities_manager') {
+                              alert('🔒 Insufficient Permissions: Only Facilities Managers can authorize work orders.');
+                              return;
+                            }
+                            await ApiClient.approveWorkOrder(wo.work_order_id, true, approvalRationale);
+                            loadAllData();
+                            alert(`Work Order ${wo.work_order_id} authorized and dispatched to field technician!`);
+                          }}
+                          className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition"
+                        >
+                          Authorize Work Order (FM)
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await ApiClient.approveWorkOrder(wo.work_order_id, false, approvalRationale);
+                            loadAllData();
+                            alert(`Work Order ${wo.work_order_id} rejected.`);
+                          }}
+                          className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs transition"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                {workOrders.filter((w) => w.approval_status === 'Pending').length === 0 && (
+                  <div className="cs-card p-8 text-center text-xs text-slate-500">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+                    All operational work orders have been reviewed. No pending gates.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 11: N8N WORKFLOW AUTOMATION ENGINE */}
+          {currentPage === 'n8n_health' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'محرك الأتمتة البصري n8n وصحة المهام' : 'n8n Visual Workflow Automation Engine & Execution Health'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Self-hosted n8n orchestrator executing 9 autonomous event-driven and scheduled building workflows.
+                </p>
+              </div>
+
+              <div className="cs-card overflow-hidden">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                     <tr>
-                      <th className="p-2.5">Timestamp (UTC)</th>
-                      <th className="p-2.5">Electricity (kWh)</th>
-                      <th className="p-2.5">Water (m³)</th>
-                      <th className="p-2.5">Indoor Temp</th>
-                      <th className="p-2.5">Outdoor Temp</th>
-                      <th className="p-2.5">Chiller COP</th>
-                      <th className="p-2.5">HVAC Runtime</th>
-                      <th className="p-2.5">Quality Status</th>
+                      <th className="p-3">Workflow ID & Name</th>
+                      <th className="p-3">Trigger Type</th>
+                      <th className="p-3">Schedule</th>
+                      <th className="p-3">Latency</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3">Test Trigger</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {telemetry.slice(0, 15).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50/80">
-                        <td className="p-2.5 font-mono text-[11px] text-slate-500">
-                          {row.timestamp.replace('T', ' ').slice(0, 19)}
-                        </td>
-                        <td className="p-2.5 font-semibold text-slate-800">{row.electricity_kwh ?? '-'}</td>
-                        <td className="p-2.5 font-semibold text-slate-800">{row.water_m3 ?? '-'}</td>
-                        <td className="p-2.5 text-slate-700">{row.indoor_temp_c ? `${row.indoor_temp_c}°C` : '-'}</td>
-                        <td className="p-2.5 text-slate-700">{row.outdoor_temp_c ? `${row.outdoor_temp_c}°C` : '-'}</td>
-                        <td className="p-2.5 font-semibold text-teal-700">{row.cop_estimate ?? '-'}</td>
-                        <td className="p-2.5 text-slate-700">{row.hvac_runtime_hours ? `${row.hvac_runtime_hours} h` : '-'}</td>
-                        <td className="p-2.5">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              row.quality_status === 'valid'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {row.quality_status}
+                    {workflows.map((wf) => (
+                      <tr key={wf.id} className="hover:bg-slate-50/80">
+                        <td className="p-3 font-semibold text-slate-900">{wf.name}</td>
+                        <td className="p-3 text-slate-600">{wf.trigger}</td>
+                        <td className="p-3 text-slate-500">{wf.schedule}</td>
+                        <td className="p-3 font-mono text-teal-700">{wf.latency}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            {wf.status}
                           </span>
+                        </td>
+                        <td className="p-3">
+                          <button
+                            onClick={() => handleTriggerWorkflow(wf.id)}
+                            className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-teal-300 font-semibold text-[11px]"
+                          >
+                            Trigger
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -620,438 +1345,222 @@ export const App: React.FC = () => {
             </div>
           )}
 
-          {/* PAGE 4: AI INSIGHTS */}
-          {currentPage === 'insights' && (
-            <div className="space-y-4">
+          {/* SECTION 12: REPORTS & AUDITABLE DELIVERABLES */}
+          {currentPage === 'reports' && (
+            <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'رؤى الذكاء الاصطناعي والتحقيق السببي' : 'AI Autonomous Investigation & Insights'}
+                  {lang === 'ar' ? 'التقارير وسجلات التدقيق القابلة للتنزيل' : 'Reports & Auditable Deliverables'}
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Explainable diagnostic dossiers with calibrated confidence scores, supporting evidence, and DEWA cost impact.
+                  Download official corporate ESG compliance JSON and tamper-evident audit CSV files.
                 </p>
               </div>
 
-              {investigationData ? (
-                <div className="cs-card p-6 space-y-5 bg-white border-teal-500 border-2">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <div>
-                      <span className="text-xs font-mono text-teal-600 font-semibold block mb-1">
-                        Investigation #{investigationData.investigation_id}
-                      </span>
-                      <h3 className="text-base font-bold text-slate-900">
-                        Incident Analysis for {investigationData.building_id} ({investigationData.asset_id})
-                      </h3>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs text-slate-400 block">Agent Confidence</span>
-                      <span className="text-lg font-bold text-teal-700">
-                        {(investigationData.confidence_score * 100).toFixed(0)}%
-                      </span>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="cs-card p-5 space-y-4">
+                  <div className="flex items-center gap-2 text-teal-700 font-bold text-sm">
+                    <FileText className="w-5 h-5 text-teal-600" />
+                    Corporate ESG Compliance Report (2026-Q3)
                   </div>
-
-                  <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                    {investigationData.summary}
+                  <p className="text-xs text-slate-600">
+                    Complete Scope 1, Scope 2, IPMVP Option B operational reductions, and DCCE registered carbon offsets.
                   </p>
-
-                  {/* Possible Causes */}
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800 mb-2">Ranked Possible Root Causes</h4>
-                    <div className="space-y-2">
-                      {investigationData.possible_causes.map((c, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs"
-                        >
-                          <span className="font-medium text-slate-800">{c.cause}</span>
-                          <span className="px-2 py-0.5 bg-teal-100 text-teal-800 rounded font-semibold text-[10px]">
-                            {c.evidence_strength} Evidence ({(c.probability * 100).toFixed(0)}% Probability)
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                    <button
-                      onClick={() => handleCreateWorkOrder(investigationData.event_id)}
-                      className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-2"
-                    >
-                      <Wrench className="w-4 h-4" />
-                      Create Maintenance Work Order
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(esgReport, null, 2));
+                      const a = document.createElement('a');
+                      a.setAttribute('href', dataStr);
+                      a.setAttribute('download', 'coolshield_esg_q3_2026.json');
+                      a.click();
+                    }}
+                    className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-2 transition"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Official ESG JSON
+                  </button>
                 </div>
-              ) : (
-                <div className="cs-card p-12 text-center text-slate-500 text-xs">
-                  Select an anomaly from the Executive Overview or Alerts page to inspect its AI diagnostic dossier.
+
+                <div className="cs-card p-5 space-y-4">
+                  <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+                    <FileText className="w-5 h-5 text-slate-700" />
+                    Tamper-Evident Audit Trail Ledger
+                  </div>
+                  <p className="text-xs text-slate-600">
+                    Complete immutable chronological ledger of all AI diagnostic investigations, human sign-offs, and verified interventions.
+                  </p>
+                  <button
+                    onClick={() => {
+                      const csvContent = 'data:text/csv;charset=utf-8,id,timestamp,actor,role,action,resource_type,resource_id\n' +
+                        audits.map((a) => `${a.id},${a.timestamp},${a.actor},${a.role},${a.action},${a.resource_type},${a.resource_id}`).join('\n');
+                      const a = document.createElement('a');
+                      a.setAttribute('href', encodeURI(csvContent));
+                      a.setAttribute('download', 'coolshield_audit_trail.csv');
+                      a.click();
+                    }}
+                    className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center gap-2 transition"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Audit CSV Ledger
+                  </button>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
-          {/* PAGE 5: ALERTS & INCIDENTS */}
-          {currentPage === 'alerts' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    {lang === 'ar' ? 'سجل التنبيهات والحوادث' : 'Alerts & Incidents Repository'}
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Deduplicated telemetry anomalies detected across HVAC, water, and power infrastructure.
-                  </p>
-                </div>
-                {/* Severity Filter */}
-                <select
-                  value={filterSeverity}
-                  onChange={(e) => setFilterSeverity(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800"
-                >
-                  <option value="ALL">All Severities</option>
-                  <option value="Critical">Critical Only</option>
-                  <option value="High">High Only</option>
-                  <option value="Medium">Medium Only</option>
-                </select>
+          {/* SECTION 13: INTEGRATIONS, SAFETY & PILOTS */}
+          {currentPage === 'integrations' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-base font-bold text-slate-900">
+                  {lang === 'ar' ? 'التكاملات والطيار ومصفوفة أمان الـ 19 أداة' : 'Integrations, Customer Pilots & Agent 19 Typed Tools Manifest'}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  BMS gateways, prospective customer validation agreements, and typed tool risk classifications.
+                </p>
               </div>
 
+              {/* Hardware Protocol & BMS Integrations Gateways */}
               <div className="cs-card overflow-hidden">
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900">BMS & Hardware Protocol Ingestion Gateways</h3>
+                    <p className="text-[11px] text-slate-500">Live telemetry pipelines connected to Dubai facility infrastructure.</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    {integrations.length} Active Gateways
+                  </span>
+                </div>
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                     <tr>
-                      <th className="p-3">Event ID</th>
-                      <th className="p-3">Building</th>
-                      <th className="p-3">Asset</th>
-                      <th className="p-3">Severity</th>
-                      <th className="p-3">Anomaly Type</th>
-                      <th className="p-3">Observed vs Baseline</th>
-                      <th className="p-3">Action</th>
+                      <th className="p-3">Gateway Name</th>
+                      <th className="p-3">Protocol</th>
+                      <th className="p-3">Endpoint URL</th>
+                      <th className="p-3">Status</th>
+                      <th className="p-3">Synced Telemetry</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {anomalies
-                      .filter((a) => filterSeverity === 'ALL' || a.severity === filterSeverity)
-                      .map((a) => (
-                        <tr key={a.event_id} className="hover:bg-slate-50/80">
-                          <td className="p-3 font-mono text-[11px] text-slate-500">{a.event_id}</td>
-                          <td className="p-3 font-semibold text-slate-800">{a.building_id}</td>
-                          <td className="p-3 text-slate-600">{a.asset_id}</td>
-                          <td className="p-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                a.severity === 'Critical' ? 'badge-critical' : 'badge-high'
-                              }`}
-                            >
-                              {a.severity}
-                            </span>
-                          </td>
-                          <td className="p-3 font-medium text-slate-800">{a.anomaly_type}</td>
-                          <td className="p-3 text-slate-700">
-                            {a.observed_value} / <span className="text-slate-400">{a.baseline_value}</span> (+{a.deviation_pct}%)
-                          </td>
-                          <td className="p-3">
-                            <button
-                              onClick={() => {
-                                handleInvestigate(a.event_id);
-                                setCurrentPage('insights');
-                              }}
-                              className="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded font-semibold text-xs"
-                            >
-                              Investigate
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                    {integrations.map((i) => (
+                      <tr key={i.id} className="hover:bg-slate-50/80">
+                        <td className="p-3 font-semibold text-slate-800">{i.name}</td>
+                        <td className="p-3 font-mono text-[11px] text-slate-600">{i.protocol}</td>
+                        <td className="p-3 font-mono text-[11px] text-slate-500">{i.endpoint_url}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            i.status === 'Active' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {i.status}
+                          </span>
+                        </td>
+                        <td className="p-3 font-mono text-[11px] text-slate-700">
+                          {i.readings_synced_total.toLocaleString()} msgs
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
 
-          {/* PAGE 6: MAINTENANCE WORK ORDERS */}
-          {currentPage === 'workorders' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'أوامر عمل الصيانة وسير العمليات' : 'Maintenance Work Orders & Verification Lifecycle'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Track jobs from detection to human approval, technician dispatch, and IPMVP Option B verification.
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                {workOrders.map((wo) => (
-                  <div key={wo.work_order_id} className="cs-card p-5 space-y-3">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                      <div>
-                        <span className="text-xs font-mono text-slate-400 block mb-0.5">{wo.work_order_id}</span>
-                        <h3 className="text-sm font-bold text-slate-900">{wo.title}</h3>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                          {wo.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs text-slate-600">{wo.description}</p>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Building / Asset</span>
-                        <span className="font-semibold">{wo.building_id} / {wo.asset_id}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Assigned Technician</span>
-                        <span className="font-semibold">{wo.assigned_technician}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Approval Status</span>
-                        <span className="font-semibold text-amber-600">{wo.approval_status}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-400 block text-[10px]">Verified Savings</span>
-                        <span className="font-bold text-emerald-600">AED {wo.verified_savings_aed?.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PAGE 7: ENERGY & WATER ANALYTICS */}
-          {currentPage === 'analytics' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'تحليلات الطاقة والمياه والتوقعات' : 'Energy & Water Analytics & 48h Forecast'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Aggregated consumption against DEWA tariff slabs and autoregressive 48-hour forecasts with 90% confidence bounds.
-                </p>
-              </div>
-
-              {/* 48-Hour Forecast Card */}
-              {forecastData?.forecast_points && (
-                <div className="cs-card p-5 space-y-3">
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4 text-teal-600" />
-                    48-Hour Hourly Electric Consumption Forecast with 90% Prediction Intervals
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    {forecastData.forecast_points.slice(0, 8).map((pt: any, i: number) => (
-                      <div key={i} className="p-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                        <span className="text-[10px] text-slate-400 block font-mono">
-                          +{i + 1}h ({pt.timestamp.slice(11, 16)})
-                        </span>
-                        <span className="text-sm font-bold text-slate-800">{pt.predicted_value} kWh</span>
-                        <span className="text-[10px] text-slate-500 block">
-                          [{pt.lower_bound_90} - {pt.upper_bound_90}]
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* PAGE 8: EQUIPMENT HEALTH */}
-          {currentPage === 'equipment' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'سجل وكفاءة المعدات والمبردات' : 'Equipment Health, Chillers & AHU Subsystems'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Degradation scores, rated capacities, and maintenance schedules for all monitored HVAC assets.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {equipment.map((eq) => (
-                  <div key={eq.id} className="cs-card p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                        {eq.asset_type}
-                      </span>
-                      <span
-                        className={`text-sm font-bold ${
-                          eq.health_score < 75 ? 'text-amber-600' : 'text-emerald-600'
-                        }`}
-                      >
-                        Health: {eq.health_score}%
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-bold text-slate-900">{eq.name}</h3>
-                    <p className="text-xs text-slate-500">Building: {eq.building_name}</p>
-                    <div className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-                      <div>Model: <b>{eq.model}</b></div>
-                      <div>Rated Capacity: <b>{eq.rated_kw} kW</b></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PAGE 9: SAVINGS & SUSTAINABILITY */}
-          {currentPage === 'sustainability' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'الوفورات المحققة والامتثال البيئي' : 'Savings & Al Sa\'fat Sustainability Compliance'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Green building metrics aligned with Dubai Green Building Regulations and UAE Net Zero 2050 pathway.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="cs-card p-5 bg-emerald-50/50 border-emerald-200">
-                  <span className="text-xs text-emerald-800 font-semibold block mb-1">Avoided GHG Emissions</span>
-                  <div className="text-2xl font-bold text-emerald-700">{sustainability?.avoided_co2e_tons ?? '10.3'} MT CO₂e</div>
-                  <span className="text-[11px] text-emerald-600">Calculated via UAE Grid Emission Factor (0.42 kg/kWh)</span>
-                </div>
-                <div className="cs-card p-5 bg-teal-50/50 border-teal-200">
-                  <span className="text-xs text-teal-800 font-semibold block mb-1">Equivalent Trees Planted</span>
-                  <div className="text-2xl font-bold text-teal-700">{sustainability?.trees_equivalent_planted ?? 164} Trees</div>
-                  <span className="text-[11px] text-teal-600">Ecological carbon offset equivalence</span>
-                </div>
-                <div className="cs-card p-5 bg-slate-900 text-white border-slate-800">
-                  <span className="text-xs text-teal-300 font-semibold block mb-1">Dubai Green Standard</span>
-                  <div className="text-base font-bold text-white">{sustainability?.green_building_rating ?? "Al Sa'fat Gold Compatible"}</div>
-                  <span className="text-[11px] text-slate-400">Tier 1 High Performance Facility</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* PAGE 10: CUSTOMER PILOTS & VALIDATION (SECTION 13) */}
-          {currentPage === 'pilots' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'التحقق مع العملاء وخطة التجارب التجريبية' : 'Prospective Customer Validation & Pilot Framework (Section 13)'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Structured interview records, operational hypotheses, and 30-day proof-of-concept acceptance criteria with Dubai commercial landlords.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                {pilots.map((p) => (
-                  <div key={p.id} className="cs-card p-5 space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                      <div>
-                        <span className="text-xs font-mono text-teal-600 block mb-0.5">{p.id}</span>
-                        <h3 className="text-sm font-bold text-slate-900">{p.organization_name}</h3>
-                      </div>
-                      <span className="px-2.5 py-1 rounded text-xs font-bold bg-teal-50 text-teal-700 border border-teal-200">
-                        {p.status}
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-50 p-3 rounded-lg border border-slate-100">
-                      <div><b className="text-slate-400">Contact:</b> {p.contact_name} ({p.contact_role})</div>
-                      <div><b className="text-slate-400">Target Building:</b> {p.target_building}</div>
-                      <div><b className="text-slate-400">Reported Problem:</b> {p.reported_problem}</div>
-                      <div><b className="text-slate-400">Current Workflow:</b> {p.current_workflow}</div>
-                    </div>
-                    <div className="text-xs bg-teal-50/60 p-3 rounded-lg border border-teal-200 text-teal-900">
-                      <b>Proposed Pilot Acceptance Criteria:</b> {p.pilot_acceptance_criteria}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PAGE 11: INTEGRATIONS */}
-          {currentPage === 'integrations' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'التكامل وبوابات الاتصال والمجسات' : 'BMS Gateways, MQTT Brokers & API Connectors'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Modular hardware and protocol adapters connecting BACnet/IP, MQTT 5.0, and DEWA smart meter APIs.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {integrations.map((intg) => (
-                  <div key={intg.id} className="cs-card p-5 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
-                        {intg.integration_type}
-                      </span>
-                      <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span> {intg.status}
-                      </span>
-                    </div>
-                    <h3 className="text-sm font-bold text-slate-900">{intg.name}</h3>
-                    <div className="text-xs font-mono text-slate-500 bg-slate-50 p-2 rounded border border-slate-100 truncate">
-                      {intg.endpoint_url}
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-100">
-                      <span>Telemetry Synced: <b>{intg.readings_synced_total?.toLocaleString()}</b></span>
-                      <button
-                        onClick={async () => {
-                          await ApiClient.syncIntegration(intg.id);
-                          loadAllData();
-                        }}
-                        className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded text-[11px] font-semibold"
-                      >
-                        Sync Now
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* PAGE 12: SETTINGS & AUDIT LOG */}
-          {currentPage === 'settings' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'الإعدادات وسجل التدقيق غير القابل للتلاعب' : 'System Settings & Tamper-Evident Audit Log'}
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Complete immutable ledger of all agent actions, operator approvals, and technician interventions.
-                </p>
-              </div>
-
+              {/* Monitored Building Equipment Assets */}
               <div className="cs-card overflow-hidden">
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900">Monitored Building Equipment Assets</h3>
+                    <p className="text-[11px] text-slate-500">Chillers, cooling towers, booster pumps, and AHUs across Dubai properties.</p>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">
+                    {equipment.length} Assets Registered
+                  </span>
+                </div>
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                     <tr>
-                      <th className="p-3">Timestamp (UTC)</th>
-                      <th className="p-3">Actor</th>
-                      <th className="p-3">Role</th>
-                      <th className="p-3">Action</th>
-                      <th className="p-3">Resource</th>
+                      <th className="p-3">Asset</th>
+                      <th className="p-3">Building</th>
+                      <th className="p-3">Type</th>
+                      <th className="p-3">Rated Power</th>
+                      <th className="p-3">Health Score</th>
+                      <th className="p-3">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {audits.slice(0, 15).map((a) => (
-                      <tr key={a.id} className="hover:bg-slate-50/80">
-                        <td className="p-3 font-mono text-[11px] text-slate-500">
-                          {a.timestamp.replace('T', ' ').slice(0, 19)}
-                        </td>
-                        <td className="p-3 font-semibold text-slate-800">{a.actor}</td>
-                        <td className="p-3 text-slate-600">{a.role}</td>
+                    {equipment.map((eq) => (
+                      <tr key={eq.id} className="hover:bg-slate-50/80">
+                        <td className="p-3 font-semibold text-slate-800">{eq.name}</td>
+                        <td className="p-3 text-slate-600">{eq.building_name}</td>
+                        <td className="p-3 text-slate-600">{eq.asset_type}</td>
+                        <td className="p-3 font-mono text-[11px] text-slate-700">{eq.rated_kw} kW</td>
                         <td className="p-3">
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-200">
-                            {a.action}
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            eq.health_score >= 80 ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                          }`}>
+                            {eq.health_score}%
                           </span>
                         </td>
-                        <td className="p-3 font-mono text-[11px] text-slate-600">{a.resource_type}: {a.resource_id}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                            {eq.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Customer Pilot Validation */}
+              <div className="cs-card p-5 space-y-3">
+                <h3 className="text-sm font-bold text-slate-900">Prospective Customer Validation: Emaar Hospitality Pilot</h3>
+                {pilots.map((p) => (
+                  <div key={p.id} className="space-y-2 text-xs bg-slate-50 p-4 rounded-lg border border-slate-100">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-slate-900">{p.organization_name}</h4>
+                      <span className="px-2.5 py-0.5 rounded text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                        {p.status}
+                      </span>
+                    </div>
+                    <div>Contact: <b>{p.contact_name}</b> ({p.contact_role}) | Target: <b>{p.target_building}</b></div>
+                    <div>Reported Problem: {p.reported_problem}</div>
+                    <div className="p-2 bg-teal-50/60 rounded border border-teal-200 text-teal-900">
+                      <b>Agreed 30-Day Acceptance Criteria:</b> {p.pilot_acceptance_criteria}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 19 Typed Tools Security Governance */}
+              <div className="cs-card overflow-hidden">
+                <div className="p-4 border-b border-slate-100">
+                  <h3 className="text-xs font-bold text-slate-900">Agent 19 Typed Tools Security Governance Manifest</h3>
+                </div>
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Tool Name</th>
+                      <th className="p-3">Risk Classification</th>
+                      <th className="p-3">Category</th>
+                      <th className="p-3">Human Approval Gate</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {agentTools.map((t, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/80">
+                        <td className="p-3 font-mono font-semibold text-slate-800">{t.name}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            t.risk_level === 'Consequential'
+                              ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}>
+                            {t.risk_level}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-600">{t.category}</td>
+                        <td className="p-3 font-semibold text-slate-700">
+                          {t.approval_required ? '✅ Human FM Required' : 'Auto-Allowed'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

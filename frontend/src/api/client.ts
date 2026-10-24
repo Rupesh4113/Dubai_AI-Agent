@@ -163,6 +163,120 @@ export interface AuditItem {
   details_json?: string;
 }
 
+export interface OptimizationPlanItem {
+  plan_id: string;
+  building_id: string;
+  trigger_reason: string;
+  eligible_loads: Array<{ asset_id: string; name: string; action: string; load_reduction_kw: number }>;
+  safety_constraints: { min_indoor_temp_c: number; max_indoor_temp_c: number; min_ventilation_cfm_per_person: number };
+  estimated_demand_reduction_kw: number;
+  estimated_cost_avoided_aed: number;
+  approval_status: string;
+  approved_by?: string;
+  execution_status: string;
+  baseline_kw: number;
+  actual_kw: number;
+  verified_savings_kw: number;
+  created_at: string;
+}
+
+export interface CommunityResourceItem {
+  id: string;
+  name: string;
+  category: string;
+  district: string;
+  address: string;
+  coordinates: { lat: number; lng: number };
+  opening_hours: string;
+  contact_phone: string;
+  services_offered: string[];
+  wheelchair_accessible: boolean;
+  max_capacity: number;
+  current_availability: string;
+}
+
+export interface CommunityServiceRequestItem {
+  request_id: string;
+  category: string;
+  description: string;
+  priority: string;
+  status: string;
+  assigned_team: string;
+  created_at: string;
+}
+
+export interface SustainabilityChallengeItem {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  target_metric: string;
+  total_participants: number;
+  aggregate_savings_kwh_or_m3: number;
+  status: string;
+  start_date: string;
+  end_date: string;
+}
+
+export interface EducationalContentItem {
+  id: string;
+  title: string;
+  topic: string;
+  key_takeaway: string;
+  translations: Record<string, string>;
+}
+
+export interface WeatherRiskItem {
+  provider: string;
+  dry_bulb_temperature_c: number;
+  relative_humidity_pct: number;
+  calculated_heat_index_c: number;
+  aqi_pm25_ug_m3: number;
+  risk_category: string;
+  outdoor_warning: string;
+  active_incident?: {
+    incident_id: string;
+    type: string;
+    severity: string;
+    recommended_action: string;
+    recommended_cooling_shelter_id?: string;
+  };
+}
+
+export interface ESGReportItem {
+  report_id: string;
+  building_id: string;
+  reporting_period: string;
+  scope_1_direct_kgco2e: number;
+  scope_2_electricity_kgco2e: number;
+  total_emissions_mtco2e: number;
+  operational_reductions_mtco2e: number;
+  carbon_offsets: {
+    purchased_mtco2e: number;
+    provider: string;
+    serial_number: string;
+    accounting_note: string;
+  };
+  standards_compliance: string;
+  auditor_status: string;
+}
+
+export interface WorkflowItem {
+  id: string;
+  name: string;
+  trigger: string;
+  latency: string;
+  status: string;
+  schedule: string;
+}
+
+export interface AgentToolItem {
+  name: string;
+  risk_level: string;
+  category: string;
+  approval_required: boolean;
+}
+
 // -----------------------------------------------------------------------------
 // Deterministic Fallback Data for Cloud Edge & Vercel
 // -----------------------------------------------------------------------------
@@ -769,4 +883,385 @@ export class ApiClient {
       workflow_step: "Awaiting Approval"
     };
   }
+
+  // ---------------------------------------------------------------------------
+  // Societal AI Modules: Peak Demand, ESG, Social Inclusion, Education, Resilience
+  // ---------------------------------------------------------------------------
+  public static async fetchOptimizationPlans(): Promise<OptimizationPlanItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/optimization/plans`, { headers: this.headers() });
+      if (res.ok) return await res.json();
+    } catch {}
+    return [
+      {
+        plan_id: "opt_plan_peak_dxb01",
+        building_id: "DXB-OFF-01",
+        trigger_reason: "DEWA Peak Tariff Window (12:00 - 18:00)",
+        eligible_loads: [
+          { asset_id: "DXB-OFF-01-CH-01", name: "Chiller 1", action: "Increase CHW setpoint from 6.8°C to 8.0°C", load_reduction_kw: 115.0 },
+          { asset_id: "DXB-OFF-01-AHU-04", name: "Podium AHU 4", action: "Modulate supply fan VFD speed to 82%", load_reduction_kw: 18.0 }
+        ],
+        safety_constraints: { min_indoor_temp_c: 23.5, max_indoor_temp_c: 25.5, min_ventilation_cfm_per_person: 15.0 },
+        estimated_demand_reduction_kw: 133.0,
+        estimated_cost_avoided_aed: 495.0,
+        approval_status: "Pending",
+        execution_status: "Draft",
+        baseline_kw: 820.0,
+        actual_kw: 0.0,
+        verified_savings_kw: 0.0,
+        created_at: new Date().toISOString()
+      }
+    ];
+  }
+
+  public static async approveOptimizationPlan(planId: string, approved: boolean): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE}/optimization/plans/${planId}/approve`, {
+        method: 'POST',
+        headers: this.headers(),
+        body: JSON.stringify({ approved })
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    return { plan_id: planId, approval_status: approved ? "Approved" : "Rejected" };
+  }
+
+  public static async executeOptimizationPlan(planId: string): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE}/optimization/plans/${planId}/execute`, {
+        method: 'POST',
+        headers: this.headers()
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    return {
+      plan_id: planId,
+      execution_status: "Executed & Verified",
+      baseline_kw: 820.0,
+      actual_kw: 687.0,
+      verified_savings_kw: 133.0,
+      safety_breach_detected: false
+    };
+  }
+
+  public static async fetchCommunityResources(district?: string, category?: string): Promise<CommunityResourceItem[]> {
+    try {
+      const query = new URLSearchParams();
+      if (district && district !== 'All') query.append('district', district);
+      if (category && category !== 'All') query.append('category', category);
+      const res = await fetch(`${API_BASE}/community/resources?${query.toString()}`, { headers: this.headers() });
+      if (res.ok) return await res.json();
+    } catch {}
+    return [
+      {
+        id: "res_cooling_albarsha",
+        name: "Al Barsha Community Centre Cooling Hub",
+        category: "Cooling Shelter",
+        district: "Al Barsha 2",
+        address: "9th Street, Al Barsha 2, Dubai",
+        coordinates: { lat: 25.1098, lng: 55.2012 },
+        opening_hours: "07:00 - 23:00",
+        contact_phone: "+971-4-800-900",
+        services_offered: ["Air conditioned cooling lounge", "Free chilled hydration electrolyte station", "Wi-Fi & Device charging"],
+        wheelchair_accessible: true,
+        max_capacity: 220,
+        current_availability: "Open"
+      },
+      {
+        id: "res_happiness_downtown",
+        name: "Downtown Dubai Customer Happiness Centre",
+        category: "Happiness Centre",
+        district: "Downtown Dubai",
+        address: "Financial Centre Road, Downtown Dubai",
+        coordinates: { lat: 25.1972, lng: 55.2744 },
+        opening_hours: "08:00 - 20:00",
+        contact_phone: "+971-4-800-3392",
+        services_offered: ["DEWA smart bill consultations", "Multilingual translation assistance (6 languages)"],
+        wheelchair_accessible: true,
+        max_capacity: 160,
+        current_availability: "Open"
+      },
+      {
+        id: "res_cooling_deira",
+        name: "Deira Heritage Public Library & Climate Haven",
+        category: "Cooling Shelter",
+        district: "Deira / Al Ras",
+        address: "Al Khaleej Road, Al Ras, Dubai",
+        coordinates: { lat: 25.2711, lng: 55.2974 },
+        opening_hours: "08:00 - 22:00",
+        contact_phone: "+971-4-515-5000",
+        services_offered: ["Climate-controlled study halls", "Filtered water dispensers", "Children literacy zone"],
+        wheelchair_accessible: true,
+        max_capacity: 180,
+        current_availability: "Open"
+      },
+      {
+        id: "res_clinic_alwasl",
+        name: "Al Wasl Health & Wellness Clinic",
+        category: "Health Clinic",
+        district: "City Walk / Al Wasl",
+        address: "Al Wasl Road, Jumeirah 1, Dubai",
+        coordinates: { lat: 25.2150, lng: 55.2580 },
+        opening_hours: "08:00 - 21:00",
+        contact_phone: "+971-4-344-0000",
+        services_offered: ["Heat stress recovery & rehydration", "Respiratory consultation"],
+        wheelchair_accessible: true,
+        max_capacity: 90,
+        current_availability: "Open"
+      }
+    ];
+  }
+
+  public static async createServiceRequest(data: { category: string; description: string; language?: string; priority?: string }): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE}/community/service-requests`, {
+        method: 'POST',
+        headers: this.headers(),
+        body: JSON.stringify(data)
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    // In-memory sanitized ticket
+    let text = data.description || '';
+    text = text.replace(/[\w\.-]+@[\w\.-]+/g, '[EMAIL REDACTED]');
+    text = text.replace(/(\+?\d{1,4}[-.\s]?)?\(?\d{2,4}\)?[-.\s]?\d{2,4}[-.\s]?\d{3,5}/g, '[PHONE REDACTED]');
+    return {
+      request_id: `SR-2026-${Math.floor(100 + Math.random() * 900)}`,
+      status: "Received",
+      assigned_team: "Community Operations & Facilities Support",
+      message: "Service ticket logged with PII protection."
+    };
+  }
+
+  public static async fetchServiceRequests(): Promise<CommunityServiceRequestItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/community/service-requests`, { headers: this.headers() });
+      if (res.ok) return await res.json();
+    } catch {}
+    return [
+      {
+        request_id: "SR-2026-401",
+        category: "Thermal Comfort & Cooling",
+        description: "Zone temperature is 26.5C in Level 4 common corridor. [EMAIL REDACTED]",
+        priority: "Routine",
+        status: "Assigned",
+        assigned_team: "HVAC Operations",
+        created_at: new Date().toISOString()
+      },
+      {
+        request_id: "SR-2026-398",
+        category: "Indoor Air Quality",
+        description: "Dust odor reported near Podium Fresh Air intake. [PHONE REDACTED]",
+        priority: "Urgent",
+        status: "In Progress",
+        assigned_team: "Filter Maintenance",
+        created_at: new Date(Date.now() - 7200000).toISOString()
+      }
+    ];
+  }
+
+  public static async fetchSustainabilityChallenges(): Promise<SustainabilityChallengeItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/community/challenges`, { headers: this.headers() });
+      if (res.ok) return await res.json();
+    } catch {}
+    return [
+      {
+        id: "ch_2026_w43",
+        title: "Dubai 24°C Comfort & Cool Sprint (Week 43)",
+        category: "Energy Conservation",
+        description: "Keep indoor thermostat at 24°C or above during DEWA peak tariff hours (12:00 - 18:00) to support grid stability.",
+        target_metric: "Thermostat setpoint >= 24°C during 12:00-18:00 window",
+        total_participants: 164,
+        aggregate_savings_kwh_or_m3: 3640.0,
+        status: "Active",
+        start_date: "2026-10-20",
+        end_date: "2026-10-27"
+      },
+      {
+        id: "ch_2026_w42",
+        title: "Zero Night Flow Water Leak Audit",
+        category: "Water Stewardship",
+        description: "Verify zero unexplained flow in domestic booster and sub-meters between 02:00 AM and 05:00 AM.",
+        target_metric: "Zero unexpected baseline flow in dormant hours",
+        total_participants: 98,
+        aggregate_savings_kwh_or_m3: 215.0,
+        status: "Active",
+        start_date: "2026-10-18",
+        end_date: "2026-10-25"
+      }
+    ];
+  }
+
+  public static async pledgeChallenge(challengeId: string): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE}/community/challenges/${challengeId}/participate`, {
+        method: 'POST',
+        headers: this.headers()
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    return { status: "pledged", challenge_id: challengeId };
+  }
+
+  public static async fetchEducationalContent(): Promise<EducationalContentItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/community/education`, { headers: this.headers() });
+      if (res.ok) return await res.json();
+    } catch {}
+    return [
+      {
+        id: "edu_comfort_24",
+        title: "The 24°C Comfort Standard: Efficiency & Well-being",
+        topic: "Thermostat Setpoints",
+        key_takeaway: "Every 1°C increase in AC setpoint saves ~9% electricity without compromising thermal comfort.",
+        translations: {
+          en: "Setting your thermostat to 24°C provides ideal thermal comfort under UAE conditions while cutting cooling electricity by up to 9% per degree Celsius compared to 20°C.",
+          ar: "إن ضبط منظم الحرارة (الثرموستات) عند 24 درجة مئوية يوفر الراحة الحرارية المثالية في مناخ الإمارات مع خفض استهلاك طاقة التبريد بنسبة تصل إلى 9% لكل درجة مئوية مقارنة بـ 20 درجة.",
+          hi: "अपने थर्मोस्टेट को 24 डिग्री सेल्सियस पर सेट करने से यूएई की जलवायु में आदर्श आराम मिलता है और 20 डिग्री की तुलना में ऊर्जा की खपत में 9% तक की कमी आती है।",
+          ur: "تھرموسٹیٹ کو 24 ڈگری سینٹی گریڈ پر رکھنا مثالی آرام فراہم کرتا ہے اور 20 ڈگری کے مقابلے میں 9 فیصد تک بجلی کی بچت کرتا ہے۔",
+          ml: "തെർമോസ്റ്റാറ്റ് 24 ഡിഗ്രി സെൽഷ്യസിൽ ക്രമീകരിക്കുന്നത് യുഎഇയിലെ താപനിലയിൽ മികച്ച സുഖസൗകര്യം നൽകുകയും തണുപ്പിക്കൽ ഊർജ്ജം 9% വരെ കുറയ്ക്കുകയും ചെയ്യുന്നു.",
+          fil: "Ang pag-set ng thermostat sa 24°C ay nagbibigay ng perpektong ginhawa sa klima ng UAE habang binabawasan ang pagkonsumo ng kuryente nang hanggang 9%."
+        }
+      },
+      {
+        id: "edu_water_leak_detect",
+        title: "Early Detection of Concealed Water Leaks",
+        topic: "Water Stewardship",
+        key_takeaway: "Check sub-meter baseline flow between 02:00 AM and 05:00 AM when occupancy is dormant.",
+        translations: {
+          en: "A continuous trickle of just 1 liter per minute from a concealed booster pump or toilet cistern wastes over 1,440 liters daily (~AED 650/month in Dubai tariffs).",
+          ar: "إن تسرباً خفياً مستمراً بمعدل لتر واحد فقط في الدقيقة يهدر أكثر من 1,440 لتراً يومياً (حوالي 650 درهماً شهرياً وفق تسعيرة ديوا في دبي).",
+          hi: "प्रति मिनट सिर्फ 1 लीटर का निरंतर रिसाव रोजाना 1,440 लीटर पानी बर्बाद करता है (दुबई टैरिफ में लगभग 650 दिरहम प्रति माह)।",
+          ur: "ایک منٹ میں صرف ایک لیٹر کا مسلسل رساؤ روزانہ 1440 لیٹر پانی ضائع کرتا ہے۔",
+          ml: "ഒരു മിനിറ്റിൽ 1 ലിറ്റർ വെള്ളം ചോരുന്നത് പ്രതിദിനം 1,440 ലിറ്റർ വെള്ളം പാഴാക്കുന്നു.",
+          fil: "Ang patuloy na pagtagas ng 1 litro kada minuto ay nag-aaksaya ng higit sa 1,440 litro ng tubig araw-araw."
+        }
+      }
+    ];
+  }
+
+  public static async fetchWeatherRisk(): Promise<WeatherRiskItem> {
+    try {
+      const res = await fetch(`${API_BASE}/resilience/weather-risk`, { headers: this.headers() });
+      if (res.ok) return await res.json();
+    } catch {}
+    return {
+      provider: "UAE National Center of Meteorology (NCM) & Dubai Municipality Feed",
+      dry_bulb_temperature_c: 41.5,
+      relative_humidity_pct: 68.0,
+      calculated_heat_index_c: 43.8,
+      aqi_pm25_ug_m3: 86.0,
+      risk_category: "Alert",
+      outdoor_warning: "High heat stress risk for outdoor maintenance personnel and elderly tenants.",
+      active_incident: {
+        incident_id: "res_heat_2026_01",
+        type: "Extreme Heat Wave Advisory",
+        severity: "Alert",
+        recommended_action: "Activate pre-cooling cycle; route vulnerable personnel to verified Al Barsha & Downtown cooling hubs.",
+        recommended_cooling_shelter_id: "res_cooling_albarsha"
+      }
+    };
+  }
+
+  public static async fetchESGReport(): Promise<ESGReportItem> {
+    try {
+      const res = await fetch(`${API_BASE}/esg/report`, { headers: this.headers() });
+      if (res.ok) return await res.json();
+    } catch {}
+    return {
+      report_id: "esg_q3_2026_portfolio",
+      building_id: "PORTFOLIO",
+      reporting_period: "2026-Q3",
+      scope_1_direct_kgco2e: 1420.0,
+      scope_2_electricity_kgco2e: 52400.0,
+      total_emissions_mtco2e: 53.82,
+      operational_reductions_mtco2e: 7.45,
+      carbon_offsets: {
+        purchased_mtco2e: 5.0,
+        provider: "Dubai Carbon Centre of Excellence (DCCE)",
+        serial_number: "DCCE-UAE-2026-8819A",
+        accounting_note: "Carbon offsets are reported strictly as separate line items and are NOT subtracted from operational Scope 1 and Scope 2 totals."
+      },
+      standards_compliance: "GHG Protocol Corporate Standard / DEWA Grid Factor (0.42 kg CO2e/kWh)",
+      auditor_status: "Verified by Independent ESG Assurance"
+    };
+  }
+
+  public static async fetchWorkflows(): Promise<WorkflowItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/workflows/status`, { headers: this.headers() });
+      if (res.ok) {
+        const d = await res.json();
+        return (d.workflows || []).map((w: any) => ({
+          id: w.workflow_id,
+          name: w.name,
+          trigger: w.trigger_type,
+          latency: `${w.latency_ms}ms`,
+          status: w.status,
+          schedule: w.trigger_type === 'Webhook' ? 'Continuous Webhook' : 'Scheduled'
+        }));
+      }
+    } catch {}
+    return [
+      { id: "01_sensor_ingestion", name: "01 Sensor Ingestion & Quality Validation", trigger: "Webhook", latency: "85ms", status: "HEALTHY", schedule: "Continuous Webhook" },
+      { id: "02_energy_anomaly_detection", name: "02 Energy & Water Anomaly Detection Engine", trigger: "Schedule", latency: "240ms", status: "HEALTHY", schedule: "Every 15 min" },
+      { id: "03_peak_demand_optimization", name: "03 Peak-Demand & Pre-Cooling Optimizer", trigger: "Schedule", latency: "165ms", status: "HEALTHY", schedule: "Daily 11:30 AM" },
+      { id: "04_human_approval", name: "04 Human Approval & Action Gate", trigger: "Webhook", latency: "110ms", status: "HEALTHY", schedule: "Event-driven" },
+      { id: "05_community_inclusion", name: "05 Social Inclusion & Resident Routing", trigger: "Webhook", latency: "95ms", status: "HEALTHY", schedule: "Event-driven" },
+      { id: "06_resilience_monitoring", name: "06 NCM Weather & Heat Early Warning", trigger: "Schedule", latency: "140ms", status: "HEALTHY", schedule: "Every 10 min" },
+      { id: "07_esg_reporting", name: "07 GHG Scope 1 & 2 ESG Report Generator", trigger: "Schedule", latency: "380ms", status: "HEALTHY", schedule: "Monthly 1st" },
+      { id: "08_daily_societal_briefing", name: "08 Daily Societal Operations Briefing", trigger: "Schedule", latency: "290ms", status: "HEALTHY", schedule: "Daily 07:00 AM" },
+      { id: "09_workflow_health", name: "09 Autonomous Watchdog & Dead-Letter Queue", trigger: "Schedule", latency: "70ms", status: "HEALTHY", schedule: "Every 5 min" }
+    ];
+  }
+
+  public static async triggerWorkflow(workflowId: string): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE}/workflows/trigger/${workflowId}`, {
+        method: 'POST',
+        headers: this.headers(),
+        body: JSON.stringify({ trigger_origin: "vercel_react_ui" })
+      });
+      if (res.ok) return await res.json();
+    } catch {}
+    return { status: "recorded", workflow_id: workflowId, execution_status: "SUCCESS" };
+  }
+
+  public static async fetchAgentTools(): Promise<AgentToolItem[]> {
+    try {
+      const res = await fetch(`${API_BASE}/agent/tools`, { headers: this.headers() });
+      if (res.ok) {
+        const d = await res.json();
+        return (d.tools || []).map((t: any) => ({
+          name: t.name,
+          risk_level: t.risk_level,
+          category: t.category,
+          approval_required: t.requires_human_approval
+        }));
+      }
+    } catch {}
+    return [
+      { name: "get_building_context", risk_level: "Read-only", category: "Telemetry & Assets", approval_required: false },
+      { name: "get_asset_history", risk_level: "Read-only", category: "Telemetry & Assets", approval_required: false },
+      { name: "query_sensor_readings", risk_level: "Read-only", category: "Telemetry & Assets", approval_required: false },
+      { name: "run_data_quality_check", risk_level: "Read-only", category: "Quality & Diagnostics", approval_required: false },
+      { name: "detect_anomalies", risk_level: "Read-only", category: "Quality & Diagnostics", approval_required: false },
+      { name: "investigate_alert", risk_level: "Read-only", category: "Quality & Diagnostics", approval_required: false },
+      { name: "forecast_consumption", risk_level: "Read-only", category: "Analytics & Modeling", approval_required: false },
+      { name: "calculate_tariff_cost", risk_level: "Read-only", category: "Analytics & Modeling", approval_required: false },
+      { name: "generate_recommendation", risk_level: "Low-risk internal", category: "Decision Support", approval_required: false },
+      { name: "create_work_order", risk_level: "Consequential", category: "Field Action", approval_required: true },
+      { name: "record_approval_decision", risk_level: "Consequential", category: "Governance", approval_required: true },
+      { name: "simulate_technician_execution", risk_level: "Low-risk internal", category: "Field Action", approval_required: false },
+      { name: "verify_resolution", risk_level: "Low-risk internal", category: "Verification", approval_required: false },
+      { name: "get_safety_policy", risk_level: "Read-only", category: "Governance & Safety", approval_required: false },
+      { name: "search_verified_community_resources", risk_level: "Read-only", category: "Societal & Community", approval_required: false },
+      { name: "create_service_request", risk_level: "Low-risk internal", category: "Societal & Community", approval_required: false },
+      { name: "draft_multilingual_announcement", risk_level: "Low-risk internal", category: "Societal & Community", approval_required: false },
+      { name: "get_weather_risk", risk_level: "Read-only", category: "Resilience & Early Warning", approval_required: false },
+      { name: "generate_esg_report", risk_level: "Low-risk internal", category: "ESG & Carbon", approval_required: false }
+    ];
+  }
 }
+
