@@ -4,7 +4,7 @@
  * for seamless Vercel Cloud and Edge deployments.
  */
 
-const API_BASE = '/api/v1';
+const API_BASE = (import.meta.env.VITE_API_URL as string) || '/api/v1';
 
 export interface ExecutiveKPIs {
   total_buildings: number;
@@ -507,7 +507,7 @@ export class ApiClient {
   public static async fetchKPIs(): Promise<ExecutiveKPIs> {
     try {
       const res = await fetch(`${API_BASE}/kpis`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return DEFAULT_KPIS;
   }
@@ -515,7 +515,7 @@ export class ApiClient {
   public static async fetchBuildings(): Promise<BuildingItem[]> {
     try {
       const res = await fetch(`${API_BASE}/buildings`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return DEFAULT_BUILDINGS;
   }
@@ -523,7 +523,7 @@ export class ApiClient {
   public static async fetchTelemetry(buildingId: string, limit = 168): Promise<TelemetryReading[]> {
     try {
       const res = await fetch(`${API_BASE}/buildings/${buildingId}/telemetry?limit=${limit}`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     // Fallback realistic telemetry series
@@ -552,7 +552,7 @@ export class ApiClient {
     try {
       const url = buildingId ? `${API_BASE}/anomalies?building_id=${buildingId}` : `${API_BASE}/anomalies`;
       const res = await fetch(url, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     if (buildingId) {
       return DEFAULT_ANOMALIES.filter(a => a.building_id === buildingId);
@@ -563,7 +563,7 @@ export class ApiClient {
   public static async fetchInvestigation(eventId: string): Promise<InvestigationReport> {
     try {
       const res = await fetch(`${API_BASE}/anomalies/${eventId}/investigate`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     const ev = DEFAULT_ANOMALIES.find(a => a.event_id === eventId) || DEFAULT_ANOMALIES[0];
@@ -606,7 +606,7 @@ export class ApiClient {
     try {
       const url = buildingId ? `${API_BASE}/work_orders?building_id=${buildingId}` : `${API_BASE}/work_orders`;
       const res = await fetch(url, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     if (buildingId) {
       return inMemoryWorkOrders.filter(w => w.building_id === buildingId);
@@ -621,7 +621,7 @@ export class ApiClient {
         headers: this.headers(),
         body: JSON.stringify({ event_id: eventId, title })
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     const ev = DEFAULT_ANOMALIES.find(a => a.event_id === eventId) || DEFAULT_ANOMALIES[0];
@@ -654,7 +654,7 @@ export class ApiClient {
         headers: this.headers(),
         body: JSON.stringify({ approved, rationale })
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     inMemoryWorkOrders = inMemoryWorkOrders.map(wo => {
@@ -678,7 +678,7 @@ export class ApiClient {
         headers: this.headers(),
         body: JSON.stringify({ technician_notes: notes })
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     inMemoryWorkOrders = inMemoryWorkOrders.map(wo => {
@@ -701,7 +701,7 @@ export class ApiClient {
         method: 'POST',
         headers: this.headers()
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     inMemoryWorkOrders = inMemoryWorkOrders.map(wo => {
@@ -728,7 +728,7 @@ export class ApiClient {
     try {
       const url = buildingId ? `${API_BASE}/analytics/energy_water?building_id=${buildingId}` : `${API_BASE}/analytics/energy_water`;
       const res = await fetch(url, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return { daily_trends: [] };
   }
@@ -736,7 +736,7 @@ export class ApiClient {
   public static async fetchForecast(buildingId = 'DXB-OFF-01', horizon = 48): Promise<any> {
     try {
       const res = await fetch(`${API_BASE}/analytics/forecast?building_id=${buildingId}&horizon=${horizon}`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     const pts = [];
@@ -756,7 +756,7 @@ export class ApiClient {
   public static async fetchEquipment(): Promise<EquipmentItem[]> {
     try {
       const res = await fetch(`${API_BASE}/equipment`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     return [
@@ -770,7 +770,7 @@ export class ApiClient {
   public static async fetchSustainability(): Promise<any> {
     try {
       const res = await fetch(`${API_BASE}/sustainability`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return {
       avoided_energy_kwh: 24500.0,
@@ -784,7 +784,7 @@ export class ApiClient {
   public static async fetchIntegrations(): Promise<IntegrationItem[]> {
     try {
       const res = await fetch(`${API_BASE}/integrations`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return [
       { id: "bms_bacnet_downtown", name: "Downtown BMS BACnet/IP Gateway", integration_type: "BACnet/IP", endpoint_url: "bacnet://10.240.12.10:47808", status: "Operational", protocol: "BACnet MSTP/IP", readings_synced_total: 32840, error_count: 0, last_sync_time: new Date().toISOString() },
@@ -797,7 +797,7 @@ export class ApiClient {
   public static async syncIntegration(id: string): Promise<any> {
     try {
       const res = await fetch(`${API_BASE}/integrations/${id}/sync`, { method: 'POST', headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return { status: "synced", readings_added: 24 };
   }
@@ -805,7 +805,7 @@ export class ApiClient {
   public static async fetchPilots(): Promise<PilotRecord[]> {
     try {
       const res = await fetch(`${API_BASE}/pilots`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return [
       {
@@ -832,7 +832,7 @@ export class ApiClient {
         headers: this.headers(),
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return { status: "created", pilot_id: `cust_${Date.now()}` };
   }
@@ -840,7 +840,7 @@ export class ApiClient {
   public static async fetchAudits(): Promise<AuditItem[]> {
     try {
       const res = await fetch(`${API_BASE}/audits`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return [
       { id: 1, timestamp: new Date().toISOString(), actor: "CoolShield AI Verification Engine", role: "Autonomous Verifier", action: "VERIFY", resource_type: "WorkOrder", resource_id: "WO-2026-002" },
@@ -853,7 +853,7 @@ export class ApiClient {
   public static async resetDemo(): Promise<any> {
     try {
       const res = await fetch(`${API_BASE}/demo/reset`, { method: 'POST', headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return { status: "success", message: "Demo database reset." };
   }
@@ -861,7 +861,7 @@ export class ApiClient {
   public static async runScenario(key: string): Promise<any> {
     try {
       const res = await fetch(`${API_BASE}/demo/scenario/${key}`, { method: 'POST', headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
 
     const scenarioKey = key.toUpperCase();
@@ -890,7 +890,7 @@ export class ApiClient {
   public static async fetchOptimizationPlans(): Promise<OptimizationPlanItem[]> {
     try {
       const res = await fetch(`${API_BASE}/optimization/plans`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return [
       {
@@ -921,7 +921,7 @@ export class ApiClient {
         headers: this.headers(),
         body: JSON.stringify({ approved })
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return { plan_id: planId, approval_status: approved ? "Approved" : "Rejected" };
   }
@@ -932,7 +932,7 @@ export class ApiClient {
         method: 'POST',
         headers: this.headers()
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return {
       plan_id: planId,
@@ -950,7 +950,7 @@ export class ApiClient {
       if (district && district !== 'All') query.append('district', district);
       if (category && category !== 'All') query.append('category', category);
       const res = await fetch(`${API_BASE}/community/resources?${query.toString()}`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return [
       {
@@ -1019,7 +1019,7 @@ export class ApiClient {
         headers: this.headers(),
         body: JSON.stringify(data)
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     // In-memory sanitized ticket
     let text = data.description || '';
@@ -1036,7 +1036,7 @@ export class ApiClient {
   public static async fetchServiceRequests(): Promise<CommunityServiceRequestItem[]> {
     try {
       const res = await fetch(`${API_BASE}/community/service-requests`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return [
       {
@@ -1063,7 +1063,7 @@ export class ApiClient {
   public static async fetchSustainabilityChallenges(): Promise<SustainabilityChallengeItem[]> {
     try {
       const res = await fetch(`${API_BASE}/community/challenges`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return [
       {
@@ -1099,7 +1099,7 @@ export class ApiClient {
         method: 'POST',
         headers: this.headers()
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return { status: "pledged", challenge_id: challengeId };
   }
@@ -1107,7 +1107,7 @@ export class ApiClient {
   public static async fetchEducationalContent(): Promise<EducationalContentItem[]> {
     try {
       const res = await fetch(`${API_BASE}/community/education`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return [
       {
@@ -1144,7 +1144,7 @@ export class ApiClient {
   public static async fetchWeatherRisk(): Promise<WeatherRiskItem> {
     try {
       const res = await fetch(`${API_BASE}/resilience/weather-risk`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return {
       provider: "UAE National Center of Meteorology (NCM) & Dubai Municipality Feed",
@@ -1167,7 +1167,7 @@ export class ApiClient {
   public static async fetchESGReport(): Promise<ESGReportItem> {
     try {
       const res = await fetch(`${API_BASE}/esg/report`, { headers: this.headers() });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return {
       report_id: "esg_q3_2026_portfolio",
@@ -1223,7 +1223,7 @@ export class ApiClient {
         headers: this.headers(),
         body: JSON.stringify({ trigger_origin: "vercel_react_ui" })
       });
-      if (res.ok) return await res.json();
+      if (res.ok && (res.headers.get('content-type') || '').includes('application/json')) return await res.json();
     } catch {}
     return { status: "recorded", workflow_id: workflowId, execution_status: "SUCCESS" };
   }

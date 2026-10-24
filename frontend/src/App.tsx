@@ -23,6 +23,7 @@ import type {
 } from './api/client';
 import { DubaiMap } from './components/DubaiMap';
 import { DemoScenarioPlayer } from './components/DemoScenarioPlayer';
+import { t, LANGUAGES } from './i18n/translations';
 import {
   LayoutDashboard,
   Building2,
@@ -48,30 +49,135 @@ import {
   HeartHandshake,
 } from 'lucide-react';
 
-// Languages dictionary
-const LANGUAGES = [
-  { code: 'en', label: 'English', native: 'English', dir: 'ltr' },
-  { code: 'ar', label: 'Arabic', native: 'العربية', dir: 'rtl' },
-  { code: 'hi', label: 'Hindi', native: 'हिन्दी', dir: 'ltr' },
-  { code: 'ur', label: 'Urdu', native: 'اردو', dir: 'rtl' },
-  { code: 'ml', label: 'Malayalam', native: 'മലയാളം', dir: 'ltr' },
-  { code: 'fil', label: 'Filipino', native: 'Tagalog', dir: 'ltr' },
-];
+export interface RoleConfig {
+  id: string;
+  labelKey: string;
+  clearanceLevel: string;
+  clearanceBadge: string;
+  descKey: string;
+  canInvestigate: boolean;
+  canCreateWorkOrder: boolean;
+  canApproveWorkOrders: boolean;
+  canAuthorizePeakShedding: boolean;
+  canSubmitServiceTickets: boolean;
+  canPledgeChallenges: boolean;
+  canTriggerWorkflows: boolean;
+  canDownloadReports: boolean;
+  isReadOnly: boolean;
+  primarySections: string[];
+}
 
-const ROLES = [
-  { id: 'facilities_manager', label: 'Facilities Manager (Full Ops & Approval)' },
-  { id: 'property_owner', label: 'Property Owner (Portfolio & Financials)' },
-  { id: 'hvac_technician', label: 'HVAC Technician (Field Execution)' },
-  { id: 'sustainability_manager', label: 'Sustainability Manager (ESG & DEWA)' },
-  { id: 'finance_analyst', label: 'Finance Analyst (Tariffs & ROI)' },
-  { id: 'auditor', label: 'Auditor (Read-Only Compliance & Proof)' },
-];
+export const ROLES_CONFIG: Record<string, RoleConfig> = {
+  facilities_manager: {
+    id: 'facilities_manager',
+    labelKey: 'role_fm',
+    clearanceLevel: 'LEVEL 4 — FULL OPERATIONAL AUTHORITY',
+    clearanceBadge: 'Full Operational Authority',
+    descKey: 'role_desc_fm',
+    canInvestigate: true,
+    canCreateWorkOrder: true,
+    canApproveWorkOrders: true,
+    canAuthorizePeakShedding: true,
+    canSubmitServiceTickets: true,
+    canPledgeChallenges: true,
+    canTriggerWorkflows: true,
+    canDownloadReports: true,
+    isReadOnly: false,
+    primarySections: ['overview', 'monitoring', 'peak_demand', 'comfort_safety', 'approval', 'integrations'],
+  },
+  property_owner: {
+    id: 'property_owner',
+    labelKey: 'role_owner',
+    clearanceLevel: 'LEVEL 3 — PORTFOLIO ASSET & FINANCIAL OVERSIGHT',
+    clearanceBadge: 'Executive & Financial View',
+    descKey: 'role_desc_owner',
+    canInvestigate: true,
+    canCreateWorkOrder: false,
+    canApproveWorkOrders: false,
+    canAuthorizePeakShedding: false,
+    canSubmitServiceTickets: false,
+    canPledgeChallenges: true,
+    canTriggerWorkflows: false,
+    canDownloadReports: true,
+    isReadOnly: false,
+    primarySections: ['overview', 'esg', 'reports', 'integrations'],
+  },
+  hvac_technician: {
+    id: 'hvac_technician',
+    labelKey: 'role_tech',
+    clearanceLevel: 'LEVEL 2 — FIELD DIAGNOSTICS & HARDWARE EXECUTION',
+    clearanceBadge: 'Field Technical Execution',
+    descKey: 'role_desc_tech',
+    canInvestigate: true,
+    canCreateWorkOrder: true,
+    canApproveWorkOrders: false,
+    canAuthorizePeakShedding: false,
+    canSubmitServiceTickets: true,
+    canPledgeChallenges: false,
+    canTriggerWorkflows: true,
+    canDownloadReports: false,
+    isReadOnly: false,
+    primarySections: ['monitoring', 'comfort_safety', 'timeline', 'approval', 'integrations'],
+  },
+  sustainability_manager: {
+    id: 'sustainability_manager',
+    labelKey: 'role_sustainability',
+    clearanceLevel: 'LEVEL 3 — ESG COMPLIANCE & SOCIETAL IMPACT',
+    clearanceBadge: 'Sustainability & ESG Oversight',
+    descKey: 'role_desc_sustainability',
+    canInvestigate: true,
+    canCreateWorkOrder: false,
+    canApproveWorkOrders: false,
+    canAuthorizePeakShedding: false,
+    canSubmitServiceTickets: true,
+    canPledgeChallenges: true,
+    canTriggerWorkflows: false,
+    canDownloadReports: true,
+    isReadOnly: false,
+    primarySections: ['esg', 'community', 'education', 'resilience', 'reports'],
+  },
+  finance_analyst: {
+    id: 'finance_analyst',
+    labelKey: 'role_finance',
+    clearanceLevel: 'LEVEL 2 — DEWA TARIFF & ROI AUDITING',
+    clearanceBadge: 'Tariff & Cost Accounting',
+    descKey: 'role_desc_finance',
+    canInvestigate: true,
+    canCreateWorkOrder: false,
+    canApproveWorkOrders: false,
+    canAuthorizePeakShedding: false,
+    canSubmitServiceTickets: false,
+    canPledgeChallenges: false,
+    canTriggerWorkflows: false,
+    canDownloadReports: true,
+    isReadOnly: false,
+    primarySections: ['overview', 'peak_demand', 'reports'],
+  },
+  auditor: {
+    id: 'auditor',
+    labelKey: 'role_auditor',
+    clearanceLevel: 'LEVEL 1 — READ-ONLY REGULATORY COMPLIANCE',
+    clearanceBadge: 'Strict Read-Only Mode',
+    descKey: 'role_desc_auditor',
+    canInvestigate: false,
+    canCreateWorkOrder: false,
+    canApproveWorkOrders: false,
+    canAuthorizePeakShedding: false,
+    canSubmitServiceTickets: false,
+    canPledgeChallenges: false,
+    canTriggerWorkflows: false,
+    canDownloadReports: true,
+    isReadOnly: true,
+    primarySections: ['overview', 'timeline', 'reports', 'integrations'],
+  },
+};
 
 export const App: React.FC = () => {
   // Navigation & Localization
   const [currentPage, setCurrentPage] = useState<string>('overview');
   const [lang, setLang] = useState<string>('en');
   const [currentRole, setCurrentRole] = useState<string>('facilities_manager');
+  const activeRoleConfig = ROLES_CONFIG[currentRole] || ROLES_CONFIG.facilities_manager;
 
   // Application Data States
   const [kpis, setKpis] = useState<ExecutiveKPIs | null>(null);
@@ -210,17 +316,25 @@ export const App: React.FC = () => {
   };
 
   const handleCreateWorkOrder = async (eventId: string) => {
+    if (!activeRoleConfig.canCreateWorkOrder) {
+      alert(t(activeRoleConfig.isReadOnly ? 'perm_denied_auditor' : 'perm_denied_owner', lang));
+      return;
+    }
     try {
       await ApiClient.createWorkOrder(eventId);
       const updatedWo = await ApiClient.fetchWorkOrders();
       setWorkOrders(updatedWo);
-      alert('Maintenance Work Order drafted and awaiting approval.');
+      alert('Maintenance Work Order drafted and awaiting Facilities Manager approval.');
     } catch (err) {
       console.error(err);
     }
   };
 
   const handlePledge = async (challengeId: string) => {
+    if (!activeRoleConfig.canPledgeChallenges) {
+      alert(t('perm_denied_auditor', lang));
+      return;
+    }
     await ApiClient.pledgeChallenge(challengeId);
     const updated = await ApiClient.fetchSustainabilityChallenges();
     setChallenges(updated);
@@ -229,6 +343,10 @@ export const App: React.FC = () => {
 
   const handleServiceTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeRoleConfig.canSubmitServiceTickets) {
+      alert(t('perm_denied_auditor', lang));
+      return;
+    }
     await ApiClient.createServiceRequest({
       category: srCategory,
       description: srDescription,
@@ -241,17 +359,21 @@ export const App: React.FC = () => {
   };
 
   const handleApprovePlan = async (planId: string) => {
-    if (currentRole !== 'facilities_manager') {
-      alert('🔒 Permission Denied: Only Facilities Managers can authorize peak load curtailments.');
+    if (!activeRoleConfig.canAuthorizePeakShedding) {
+      alert(t('perm_denied_owner', lang));
       return;
     }
     await ApiClient.approveOptimizationPlan(planId, true);
     const updatedPlans = await ApiClient.fetchOptimizationPlans();
     setOptimizationPlans(updatedPlans);
-    alert('Peak demand optimization plan authorized!');
+    alert('Peak demand optimization plan authorized and dispatched to BMS gateway!');
   };
 
   const handleExecutePlan = async (planId: string) => {
+    if (!activeRoleConfig.canAuthorizePeakShedding) {
+      alert(t('perm_denied_owner', lang));
+      return;
+    }
     await ApiClient.executeOptimizationPlan(planId);
     const updatedPlans = await ApiClient.fetchOptimizationPlans();
     setOptimizationPlans(updatedPlans);
@@ -259,6 +381,10 @@ export const App: React.FC = () => {
   };
 
   const handleTriggerWorkflow = async (workflowId: string) => {
+    if (!activeRoleConfig.canTriggerWorkflows) {
+      alert(t('perm_denied_auditor', lang));
+      return;
+    }
     await ApiClient.triggerWorkflow(workflowId);
     const updatedWf = await ApiClient.fetchWorkflows();
     setWorkflows(updatedWf);
@@ -267,19 +393,19 @@ export const App: React.FC = () => {
 
   // 13 Navigation Sections (Societal AI Agent Dashboard)
   const navItems = [
-    { id: 'overview', label: lang === 'ar' ? '1. النظرة العامة التنفيذية' : '1. Executive Impact Overview', icon: LayoutDashboard },
-    { id: 'monitoring', label: lang === 'ar' ? '2. المراقبة وجودة البيانات' : '2. Live Sensor Telemetry', icon: Activity },
-    { id: 'peak_demand', label: lang === 'ar' ? '3. تحسين ذروة الطلب (ديوا)' : '3. Peak Demand & HVAC Optimization', icon: Zap },
-    { id: 'esg', label: lang === 'ar' ? '4. ذكاء الكربون والاستدامة' : '4. Carbon & ESG Intelligence (Scope 1 & 2)', icon: Leaf },
-    { id: 'comfort_safety', label: lang === 'ar' ? '5. الراحة والحدود الآمنة' : '5. Indoor Comfort & Safety Bounds', icon: ShieldCheck },
-    { id: 'community', label: lang === 'ar' ? '6. المركز المجتمعي والتبريد' : '6. Social Inclusion & Community Hub', icon: Building2 },
-    { id: 'education', label: lang === 'ar' ? '7. التوعية وتحديات الاستدامة' : '7. Sustainability Education & Sprints', icon: Brain },
-    { id: 'resilience', label: lang === 'ar' ? '8. المرونة والإنذار المبكر' : '8. Resilience & Early Warning (NCM)', icon: AlertCircle },
-    { id: 'timeline', label: lang === 'ar' ? '9. تسلسل قرارات الوكيل' : '9. AI Reasoning & Activity Timeline', icon: TrendingUp },
-    { id: 'approval', label: lang === 'ar' ? '10. مركز الموافقات البشرية' : '10. Human Approval Centre', icon: UserCheck },
-    { id: 'n8n_health', label: lang === 'ar' ? '11. محرك الأتمتة n8n' : '11. n8n Workflow Automation Engine', icon: Network },
-    { id: 'reports', label: lang === 'ar' ? '12. التقارير والتدقيق' : '12. Reports & Auditable Deliverables', icon: BarChart3 },
-    { id: 'integrations', label: lang === 'ar' ? '13. التكاملات والطيار' : '13. Integrations, Safety & Pilots', icon: Settings },
+    { id: 'overview', labelKey: 'nav_overview', icon: LayoutDashboard },
+    { id: 'monitoring', labelKey: 'nav_monitoring', icon: Activity },
+    { id: 'peak_demand', labelKey: 'nav_peak_demand', icon: Zap },
+    { id: 'esg', labelKey: 'nav_esg', icon: Leaf },
+    { id: 'comfort_safety', labelKey: 'nav_comfort_safety', icon: ShieldCheck },
+    { id: 'community', labelKey: 'nav_community', icon: Building2 },
+    { id: 'education', labelKey: 'nav_education', icon: Brain },
+    { id: 'resilience', labelKey: 'nav_resilience', icon: AlertCircle },
+    { id: 'timeline', labelKey: 'nav_timeline', icon: TrendingUp },
+    { id: 'approval', labelKey: 'nav_approval', icon: UserCheck },
+    { id: 'n8n_health', labelKey: 'nav_n8n_health', icon: Network },
+    { id: 'reports', labelKey: 'nav_reports', icon: BarChart3 },
+    { id: 'integrations', labelKey: 'nav_integrations', icon: Settings },
   ];
 
   const filteredResources = districtFilter === 'All'
@@ -295,9 +421,7 @@ export const App: React.FC = () => {
           <span className="font-semibold text-white">CoolShield AI</span>
           <span className="hidden sm:inline text-slate-400">|</span>
           <span className="hidden sm:inline text-slate-300">
-            {lang === 'ar'
-              ? 'الوكيل الذكي للعمليات المجتمعية والمباني المستدامة في دبي (التحكم الفيزيائي محمي بالموافقات البشرية)'
-              : 'Autonomous Societal AI Agent for Sustainable Buildings & Resilient Communities in Dubai'}
+            {t('societal_notice', lang)}
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -337,9 +461,9 @@ export const App: React.FC = () => {
               onChange={(e) => handleRoleChange(e.target.value)}
               className="bg-transparent text-slate-800 font-semibold focus:outline-none cursor-pointer text-xs"
             >
-              {ROLES.map((r) => (
+              {Object.values(ROLES_CONFIG).map((r) => (
                 <option key={r.id} value={r.id}>
-                  {r.label}
+                  {t(r.labelKey, lang)}
                 </option>
               ))}
             </select>
@@ -363,6 +487,45 @@ export const App: React.FC = () => {
         </div>
       </header>
 
+      {/* Active Persona Context & Clearance Banner */}
+      <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-white shadow-xs ${
+            activeRoleConfig.isReadOnly ? 'bg-slate-700' : 'bg-teal-700'
+          }`}>
+            <UserCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-slate-900">{t(activeRoleConfig.labelKey, lang)}</span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                activeRoleConfig.isReadOnly
+                  ? 'bg-slate-100 text-slate-700 border border-slate-300'
+                  : 'bg-teal-50 text-teal-800 border border-teal-200'
+              }`}>
+                {activeRoleConfig.clearanceBadge}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-500">{t(activeRoleConfig.descKey, lang)}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-[11px]">
+          <span className="px-2.5 py-1 rounded bg-slate-100 text-slate-700 font-mono">
+            Clearance: <b className="text-slate-900">{activeRoleConfig.clearanceLevel.split(' — ')[0]}</b>
+          </span>
+          {activeRoleConfig.canApproveWorkOrders ? (
+            <span className="px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Consequential Approvals Enabled
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded bg-amber-50 text-amber-800 font-semibold border border-amber-200 flex items-center gap-1">
+              🔒 Approvals Restricted to Facilities Manager
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Demonstration Scenario Bar */}
       <DemoScenarioPlayer
         onRefreshAll={() => loadAllData()}
@@ -382,14 +545,26 @@ export const App: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setCurrentPage(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold transition ${
                   active
                     ? 'bg-slate-900 text-teal-300 shadow-sm'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-teal-400' : 'text-slate-400'}`} />
-                <span className="truncate text-left">{item.label}</span>
+                <div className="flex items-center gap-2.5 truncate">
+                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'text-teal-400' : 'text-slate-400'}`} />
+                  <span className="truncate text-left">{t(item.labelKey, lang)}</span>
+                </div>
+                {activeRoleConfig.primarySections.includes(item.id) && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-700 font-bold shrink-0">
+                    Primary
+                  </span>
+                )}
+                {activeRoleConfig.isReadOnly && !activeRoleConfig.primarySections.includes(item.id) && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold shrink-0">
+                    View
+                  </span>
+                )}
               </button>
             );
           })}
@@ -768,9 +943,15 @@ export const App: React.FC = () => {
                         {plan.approval_status === 'Pending' && (
                           <button
                             onClick={() => handleApprovePlan(plan.plan_id)}
-                            className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition"
+                            className={`px-3 py-1.5 rounded-lg font-semibold text-xs transition ${
+                              activeRoleConfig.canAuthorizePeakShedding
+                                ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                                : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            }`}
                           >
-                            Approve Plan (FM)
+                            {activeRoleConfig.canAuthorizePeakShedding
+                              ? 'Approve Plan (FM)'
+                              : '🔒 Restricted to FM'}
                           </button>
                         )}
                         {plan.approval_status === 'Approved' && plan.execution_status !== 'Executed & Verified' && (
@@ -1257,17 +1438,23 @@ export const App: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={async () => {
-                            if (currentRole !== 'facilities_manager') {
-                              alert('🔒 Insufficient Permissions: Only Facilities Managers can authorize work orders.');
+                            if (!activeRoleConfig.canApproveWorkOrders) {
+                              alert(t('perm_denied_owner', lang));
                               return;
                             }
                             await ApiClient.approveWorkOrder(wo.work_order_id, true, approvalRationale);
                             loadAllData();
                             alert(`Work Order ${wo.work_order_id} authorized and dispatched to field technician!`);
                           }}
-                          className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition"
+                          className={`px-4 py-2 rounded-lg font-semibold text-xs transition ${
+                            activeRoleConfig.canApproveWorkOrders
+                              ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-sm'
+                              : 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                          }`}
                         >
-                          Authorize Work Order (FM)
+                          {activeRoleConfig.canApproveWorkOrders
+                            ? '✅ Authorize Work Order (FM)'
+                            : '🔒 Restricted to Facilities Manager'}
                         </button>
                         <button
                           onClick={async () => {
