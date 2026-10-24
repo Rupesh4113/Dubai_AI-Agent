@@ -18,7 +18,7 @@ def test_def01_multilingual_dictionary_completeness():
     # Verify all 6 languages are declared
     for code in ["en", "ar", "hi", "ur", "ml", "fil"]:
         assert f"code: '{code}'" in content, f"Language code '{code}' missing from LANGUAGES list"
-        assert f"  {code}: {{" in content, f"Translation dictionary for '{code}' missing"
+        assert f'"{code}": {{' in content or f"  {code}: {{" in content, f"Translation dictionary for '{code}' missing"
 
     # Verify RTL is set for Arabic and Urdu, LTR for others
     assert "{ code: 'ar', label: 'Arabic', native: 'العربية', dir: 'rtl' }" in content

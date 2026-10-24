@@ -1,48 +1,58 @@
 import React, { useState } from 'react';
 import { ApiClient } from '../api/client';
 import { CheckCircle, AlertTriangle, ShieldCheck, Wrench, RefreshCw, X, ArrowRight } from 'lucide-react';
+import { t } from '../i18n/translations';
 
 interface DemoScenarioPlayerProps {
   onRefreshAll: () => void;
   lang?: string;
 }
 
-const SCENARIOS = [
+interface ScenarioDef {
+  key: string;
+  titleKey: string;
+  descKey: string;
+  building: string;
+  metric: string;
+  severity: string;
+}
+
+const SCENARIO_DEFS: ScenarioDef[] = [
   {
     key: 'B',
-    title: 'Scenario B: Suspected Water Leak (Palm Oasis Resort)',
-    desc: 'Sudden continuous flow surge of 4.8x baseline in hotel spa basement loop.',
+    titleKey: 'scenario_b_title',
+    descKey: 'scenario_b_desc',
     building: 'DXB-HOT-02',
     metric: 'water_m3',
     severity: 'Critical'
   },
   {
     key: 'A',
-    title: 'Scenario A: HVAC Efficiency Degradation (Al-Wasl Promenade)',
-    desc: 'Condenser tube scaling causes chiller COP to drop from 3.8 to 2.45.',
+    titleKey: 'scenario_a_title',
+    descKey: 'scenario_a_desc',
     building: 'DXB-MIX-04',
     metric: 'cop_estimate',
     severity: 'High'
   },
   {
     key: 'C',
-    title: 'Scenario C: Unexpected Overnight Energy Consumption (Burj Al-Amal)',
-    desc: 'BMS manual override left running at 100% capacity after business hours.',
+    titleKey: 'scenario_c_title',
+    descKey: 'scenario_c_desc',
     building: 'DXB-OFF-01',
     metric: 'electricity_kwh',
     severity: 'High'
   },
   {
     key: 'D',
-    title: 'Scenario D: Faulty Temperature Sensor & Packet Loss (Marina Bay Horizon)',
-    desc: 'Zone Modbus transmitter drifts by +7.5°C with dropped packet telemetry.',
+    titleKey: 'scenario_d_title',
+    descKey: 'scenario_d_desc',
     building: 'DXB-RES-03',
     metric: 'indoor_temp_c',
     severity: 'Medium'
   }
 ];
 
-export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefreshAll }) => {
+export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefreshAll, lang = 'en' }) => {
   const [selectedKey, setSelectedKey] = useState<string>('B');
   const [activeStep, setActiveStep] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
@@ -131,12 +141,12 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase bg-amber-500/20 text-amber-400 border border-amber-500/30">
-              Competition Demonstration Mode
+              {t('demo_mode_badge', lang)}
             </span>
-            <span className="text-xs text-slate-400">11-Step Closed-Loop Agentic Workflow</span>
+            <span className="text-xs text-slate-400">{t('demo_player_badge', lang)}</span>
           </div>
           <h3 className="text-lg font-bold text-white tracking-tight">
-            Autonomous Incident Investigation & Verification Player
+            {t('demo_player_heading', lang)}
           </h3>
         </div>
         <div className="flex items-center gap-3">
@@ -146,14 +156,14 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 transition"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            Reset Demo Data
+            {t('demo_reset_btn', lang)}
           </button>
         </div>
       </div>
 
       {/* Scenario Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {SCENARIOS.map((s) => (
+        {SCENARIO_DEFS.map((s) => (
           <div
             key={s.key}
             onClick={() => startScenario(s.key)}
@@ -171,10 +181,10 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
               </span>
               <span className="text-xs font-mono text-slate-400">{s.building}</span>
             </div>
-            <h4 className="text-xs font-bold text-slate-200 line-clamp-1 mb-1">{s.title}</h4>
-            <p className="text-[11px] text-slate-400 line-clamp-2 mb-3">{s.desc}</p>
+            <h4 className="text-xs font-bold text-slate-200 line-clamp-1 mb-1">{t(s.titleKey, lang)}</h4>
+            <p className="text-[11px] text-slate-400 line-clamp-2 mb-3">{t(s.descKey, lang)}</p>
             <div className="flex items-center justify-between text-[11px] text-teal-400 font-semibold">
-              <span>Execute Scenario {s.key}</span>
+              <span>{t('demo_execute_scenario', lang)} {s.key}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </div>
@@ -195,15 +205,15 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
             {/* Workflow Step Indicator */}
             <div className="mb-6">
               <div className="text-xs text-teal-400 font-semibold mb-2">
-                CLOSED-LOOP AGENTIC EXECUTION: SCENARIO {selectedKey}
+                {t('demo_modal_workflow', lang)}: {selectedKey}
               </div>
               <div className="grid grid-cols-5 gap-2 text-center text-xs">
                 {[
-                  { n: 1, label: '1. Detect & Investigate' },
-                  { n: 2, label: '2. Review Evidence' },
-                  { n: 3, label: '3. Human Approval' },
-                  { n: 4, label: '4. Tech Execution' },
-                  { n: 5, label: '5. Verify Outcome' },
+                  { n: 1, label: t('demo_step_1', lang) },
+                  { n: 2, label: t('demo_step_2', lang) },
+                  { n: 3, label: t('demo_step_3', lang) },
+                  { n: 4, label: t('demo_step_4', lang) },
+                  { n: 5, label: t('demo_step_5', lang) },
                 ].map((st) => (
                   <div
                     key={st.n}
@@ -224,7 +234,7 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
             {loading ? (
               <div className="py-16 text-center">
                 <RefreshCw className="w-8 h-8 animate-spin mx-auto text-teal-400 mb-3" />
-                <p className="text-slate-300 text-sm">Processing autonomous agent pipeline...</p>
+                <p className="text-slate-300 text-sm">{t('demo_pipeline_loading', lang)}</p>
               </div>
             ) : (
               <div>
@@ -235,25 +245,25 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-bold text-sm text-teal-300 flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4 text-amber-400" />
-                          Anomaly Detection Event #{scenarioData.event?.event_id}
+                          {t('demo_anomaly_event', lang)} #{scenarioData.event?.event_id}
                         </span>
-                        <span className="text-xs text-slate-400">Building: {scenarioData.event?.building_id}</span>
+                        <span className="text-xs text-slate-400">{t('demo_building', lang)}: {scenarioData.event?.building_id}</span>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-3">
                         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                          <span className="text-slate-400 block text-[10px]">Anomaly Type</span>
+                          <span className="text-slate-400 block text-[10px]">{t('demo_anomaly_type', lang)}</span>
                           <span className="font-semibold text-slate-200">{scenarioData.event?.anomaly_type}</span>
                         </div>
                         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                          <span className="text-slate-400 block text-[10px]">Observed Value</span>
+                          <span className="text-slate-400 block text-[10px]">{t('demo_observed_value', lang)}</span>
                           <span className="font-bold text-red-400">{scenarioData.event?.observed_value}</span>
                         </div>
                         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                          <span className="text-slate-400 block text-[10px]">Expected Baseline</span>
+                          <span className="text-slate-400 block text-[10px]">{t('demo_expected_baseline', lang)}</span>
                           <span className="font-semibold text-emerald-400">{scenarioData.event?.baseline_value}</span>
                         </div>
                         <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                          <span className="text-slate-400 block text-[10px]">Deviation</span>
+                          <span className="text-slate-400 block text-[10px]">{t('demo_deviation', lang)}</span>
                           <span className="font-bold text-amber-400">+{scenarioData.event?.deviation_pct}%</span>
                         </div>
                       </div>
@@ -265,7 +275,7 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
                     {/* Ranked Causes */}
                     <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
                       <h4 className="text-xs font-bold text-slate-200 mb-2">
-                        Evidence-Ranked Root Causes (Calibrated Confidence: {(scenarioData.investigation_report?.confidence_score * 100).toFixed(0)}%)
+                        {t('demo_root_causes', lang)} ({t('demo_calibrated_conf', lang)}: {(scenarioData.investigation_report?.confidence_score * 100).toFixed(0)}%)
                       </h4>
                       <div className="space-y-2">
                         {scenarioData.investigation_report?.possible_causes?.map((c: any, idx: number) => (
@@ -282,7 +292,7 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
                     {/* Financial Avoidable Cost */}
                     <div className="bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex items-center justify-between">
                       <div>
-                        <span className="text-xs text-slate-400 block">Potential Avoidable 24h Cost Impact</span>
+                        <span className="text-xs text-slate-400 block">{t('demo_avoidable_cost_24h', lang)}</span>
                         <span className="text-lg font-bold text-amber-400">
                           AED {scenarioData.investigation_report?.financial_impact?.potential_avoidable_cost_24h_aed?.toLocaleString()}
                         </span>
@@ -291,7 +301,7 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
                         onClick={() => setActiveStep(2)}
                         className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition"
                       >
-                        Proceed to Work Order Approval <ArrowRight className="w-4 h-4" />
+                        {t('demo_btn_proceed_approval', lang)} <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -304,31 +314,31 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-bold text-sm text-amber-300 flex items-center gap-2">
                           <ShieldCheck className="w-5 h-5 text-amber-400" />
-                          Human Operational Approval Required (Role: Facilities Manager)
+                          {t('demo_approval_required', lang)}
                         </span>
                         <span className="text-xs font-mono text-slate-400">{scenarioData.work_order?.work_order_id}</span>
                       </div>
                       <p className="text-xs text-slate-300 mb-4">
-                        Per UAE safety and commercial operational protocols, physical building dispatch or BMS actions require authorized operator sign-off.
+                        {t('demo_approval_disclaimer', lang)}
                       </p>
                       <div className="bg-slate-900/70 p-4 rounded-xl border border-slate-800 space-y-2 text-xs mb-4">
-                        <div><b className="text-slate-400">Target Asset:</b> {scenarioData.event?.asset_id}</div>
-                        <div><b className="text-slate-400">Action:</b> {scenarioData.investigation_report?.recommendations?.[0]?.title}</div>
-                        <div><b className="text-slate-400">Safety Notes:</b> {scenarioData.investigation_report?.recommendations?.[0]?.safety_instructions}</div>
+                        <div><b className="text-slate-400">{t('demo_target_asset', lang)}:</b> {scenarioData.event?.asset_id}</div>
+                        <div><b className="text-slate-400">{t('demo_action', lang)}:</b> {scenarioData.investigation_report?.recommendations?.[0]?.title}</div>
+                        <div><b className="text-slate-400">{t('demo_safety_notes', lang)}:</b> {scenarioData.investigation_report?.recommendations?.[0]?.safety_instructions}</div>
                       </div>
                       <div className="flex items-center justify-end gap-3">
                         <button
                           onClick={() => setIsModalOpen(false)}
                           className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium"
                         >
-                          Dismiss with Reason
+                          {t('demo_btn_dismiss', lang)}
                         </button>
                         <button
                           onClick={handleApprove}
                           className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg transition"
                         >
                           <CheckCircle className="w-4 h-4" />
-                          Authorize & Dispatch Work Order
+                          {t('demo_btn_authorize', lang)}
                         </button>
                       </div>
                     </div>
@@ -342,21 +352,21 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-bold text-sm text-teal-300 flex items-center gap-2">
                           <Wrench className="w-5 h-5 text-teal-400" />
-                          Field Technician Execution (Technician: Tariq Mansoor)
+                          {t('demo_tech_title', lang)}
                         </span>
                         <span className="px-2 py-0.5 rounded text-[11px] bg-blue-500/20 text-blue-300 border border-blue-500/30">
-                          Job Status: Assigned
+                          {t('demo_tech_status', lang)}
                         </span>
                       </div>
                       <p className="text-xs text-slate-300 mb-4">
-                        Work order dispatched to mobile team. Technician records findings and completes corrective maintenance.
+                        {t('demo_tech_desc', lang)}
                       </p>
                       <button
                         onClick={handleSimulateTechnician}
                         className="w-full py-3 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition"
                       >
                         <Wrench className="w-4 h-4" />
-                        Simulate Field Completion & Submit Resolution Findings
+                        {t('demo_btn_tech_complete', lang)}
                       </button>
                     </div>
                   </div>
@@ -369,21 +379,21 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
                       <div className="flex items-center justify-between mb-3">
                         <span className="font-bold text-sm text-emerald-300 flex items-center gap-2">
                           <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                          Autonomous Post-Intervention Measurement & Verification
+                          {t('demo_verify_title', lang)}
                         </span>
                         <span className="px-2 py-0.5 rounded text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                          Awaiting Verification
+                          {t('demo_verify_status', lang)}
                         </span>
                       </div>
                       <p className="text-xs text-slate-300 mb-4">
-                        The agent queries post-action telemetry, compares against the weather-adjusted IPMVP Option B baseline model, and verifies whether savings are realized.
+                        {t('demo_verify_desc', lang)}
                       </p>
                       <button
                         onClick={handleVerify}
                         className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition"
                       >
                         <CheckCircle className="w-4 h-4" />
-                        Verify Telemetry & Confirm Realized Savings
+                        {t('demo_btn_verify', lang)}
                       </button>
                     </div>
                   </div>
@@ -395,27 +405,27 @@ export const DemoScenarioPlayer: React.FC<DemoScenarioPlayerProps> = ({ onRefres
                     <div className="w-14 h-14 bg-emerald-500/20 border border-emerald-500 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3">
                       <CheckCircle className="w-8 h-8" />
                     </div>
-                    <h3 className="text-lg font-bold text-white">Closed-Loop Resolution Successfully Verified</h3>
+                    <h3 className="text-lg font-bold text-white">{t('demo_verified_success', lang)}</h3>
                     <p className="text-xs text-slate-300 max-w-md mx-auto mb-4">
-                      Telemetry confirmed returned to normal baseline (+/-1.8%). Work order status transitioned to <b>Resolved & Closed</b> with tamper-evident audit log.
+                      {t('demo_verified_desc', lang)}
                     </p>
                     <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 max-w-lg mx-auto grid grid-cols-2 gap-3 text-xs mb-6 text-left">
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Verified Weekly Savings</span>
+                        <span className="text-slate-400 block text-[10px]">{t('demo_verified_savings', lang)}</span>
                         <span className="font-bold text-emerald-400 text-sm">
                           AED {scenarioData.verification?.verified_weekly_savings_aed?.toLocaleString() || '3,360'}
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[10px]">Audit Verification Status</span>
-                        <span className="font-bold text-teal-400 text-sm">IPMVP Option B Verified</span>
+                        <span className="text-slate-400 block text-[10px]">{t('demo_verified_audit_status', lang)}</span>
+                        <span className="font-bold text-teal-400 text-sm">{t('demo_verified_ipmvp', lang)}</span>
                       </div>
                     </div>
                     <button
                       onClick={() => setIsModalOpen(false)}
                       className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold transition"
                     >
-                      Return to Executive Dashboard
+                      {t('demo_btn_return_dashboard', lang)}
                     </button>
                   </div>
                 )}

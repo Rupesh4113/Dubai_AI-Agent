@@ -1,7 +1,7 @@
 {
   "dataset_name": "CoolShield AI Synthetic Dubai Building Telemetry",
   "version": "1.0.0",
-  "generated_at": "2026-10-24T12:03:50.865421+00:00",
+  "generated_at": "2026-10-24T12:43:24.167008+00:00",
   "random_seed": 42,
   "duration_days": 90,
   "sample_interval": "1 hour",

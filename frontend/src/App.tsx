@@ -54,6 +54,7 @@ export interface RoleConfig {
   labelKey: string;
   clearanceLevel: string;
   clearanceBadge: string;
+  badgeKey: string;
   descKey: string;
   canInvestigate: boolean;
   canCreateWorkOrder: boolean;
@@ -73,6 +74,7 @@ export const ROLES_CONFIG: Record<string, RoleConfig> = {
     labelKey: 'role_fm',
     clearanceLevel: 'LEVEL 4 — FULL OPERATIONAL AUTHORITY',
     clearanceBadge: 'Full Operational Authority',
+    badgeKey: 'badge_fm',
     descKey: 'role_desc_fm',
     canInvestigate: true,
     canCreateWorkOrder: true,
@@ -90,6 +92,7 @@ export const ROLES_CONFIG: Record<string, RoleConfig> = {
     labelKey: 'role_owner',
     clearanceLevel: 'LEVEL 3 — PORTFOLIO ASSET & FINANCIAL OVERSIGHT',
     clearanceBadge: 'Executive & Financial View',
+    badgeKey: 'badge_owner',
     descKey: 'role_desc_owner',
     canInvestigate: true,
     canCreateWorkOrder: false,
@@ -107,6 +110,7 @@ export const ROLES_CONFIG: Record<string, RoleConfig> = {
     labelKey: 'role_tech',
     clearanceLevel: 'LEVEL 2 — FIELD DIAGNOSTICS & HARDWARE EXECUTION',
     clearanceBadge: 'Field Technical Execution',
+    badgeKey: 'badge_tech',
     descKey: 'role_desc_tech',
     canInvestigate: true,
     canCreateWorkOrder: true,
@@ -124,6 +128,7 @@ export const ROLES_CONFIG: Record<string, RoleConfig> = {
     labelKey: 'role_sustainability',
     clearanceLevel: 'LEVEL 3 — ESG COMPLIANCE & SOCIETAL IMPACT',
     clearanceBadge: 'Sustainability & ESG Oversight',
+    badgeKey: 'badge_sustainability',
     descKey: 'role_desc_sustainability',
     canInvestigate: true,
     canCreateWorkOrder: false,
@@ -141,6 +146,7 @@ export const ROLES_CONFIG: Record<string, RoleConfig> = {
     labelKey: 'role_finance',
     clearanceLevel: 'LEVEL 2 — DEWA TARIFF & ROI AUDITING',
     clearanceBadge: 'Tariff & Cost Accounting',
+    badgeKey: 'badge_finance',
     descKey: 'role_desc_finance',
     canInvestigate: true,
     canCreateWorkOrder: false,
@@ -158,6 +164,7 @@ export const ROLES_CONFIG: Record<string, RoleConfig> = {
     labelKey: 'role_auditor',
     clearanceLevel: 'LEVEL 1 — READ-ONLY REGULATORY COMPLIANCE',
     clearanceBadge: 'Strict Read-Only Mode',
+    badgeKey: 'badge_auditor',
     descKey: 'role_desc_auditor',
     canInvestigate: false,
     canCreateWorkOrder: false,
@@ -503,7 +510,7 @@ export const App: React.FC = () => {
                   ? 'bg-slate-100 text-slate-700 border border-slate-300'
                   : 'bg-teal-50 text-teal-800 border border-teal-200'
               }`}>
-                {activeRoleConfig.clearanceBadge}
+                {t(activeRoleConfig.badgeKey, lang)}
               </span>
             </div>
             <p className="text-[11px] text-slate-500">{t(activeRoleConfig.descKey, lang)}</p>
@@ -516,11 +523,11 @@ export const App: React.FC = () => {
           </span>
           {activeRoleConfig.canApproveWorkOrders ? (
             <span className="px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Consequential Approvals Enabled
+              <CheckCircle2 className="w-3.5 h-3.5" /> {t('perm_badge_approvals_enabled', lang)}
             </span>
           ) : (
             <span className="px-2.5 py-1 rounded bg-amber-50 text-amber-800 font-semibold border border-amber-200 flex items-center gap-1">
-              🔒 Approvals Restricted to Facilities Manager
+              🔒 {t('perm_badge_approvals_restricted', lang)}
             </span>
           )}
         </div>
@@ -536,7 +543,7 @@ export const App: React.FC = () => {
         {/* Sidebar Navigation (13 Sections) */}
         <aside className="w-64 bg-white border-r border-slate-200 p-4 space-y-1.5 shrink-0 overflow-y-auto">
           <div className="text-[11px] font-bold tracking-wider text-slate-400 uppercase px-3 mb-2">
-            {lang === 'ar' ? 'أقسام النظام الـ 13' : '13 Operational Sections'}
+            {t('sections_header', lang)}
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -557,12 +564,12 @@ export const App: React.FC = () => {
                 </div>
                 {activeRoleConfig.primarySections.includes(item.id) && (
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-700 font-bold shrink-0">
-                    Primary
+                    {t('role_badge_primary', lang)}
                   </span>
                 )}
                 {activeRoleConfig.isReadOnly && !activeRoleConfig.primarySections.includes(item.id) && (
                   <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-bold shrink-0">
-                    View
+                    {t('role_badge_view', lang)}
                   </span>
                 )}
               </button>
@@ -579,7 +586,7 @@ export const App: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="cs-card p-4">
                   <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-                    <span>{lang === 'ar' ? 'المباني المراقبة' : 'Monitored Buildings'}</span>
+                    <span>{t('kpi_buildings', lang)}</span>
                     <Building2 className="w-4 h-4 text-slate-400" />
                   </div>
                   <div className="text-2xl font-bold text-slate-900">
@@ -592,7 +599,7 @@ export const App: React.FC = () => {
 
                 <div className="cs-card p-4">
                   <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-                    <span>{lang === 'ar' ? 'استهلاك الكهرباء (24 ساعة)' : 'Electricity (24h)'}</span>
+                    <span>{t('kpi_electricity', lang)}</span>
                     <Zap className="w-4 h-4 text-amber-500" />
                   </div>
                   <div className="text-2xl font-bold text-slate-900">
@@ -605,7 +612,7 @@ export const App: React.FC = () => {
 
                 <div className="cs-card p-4">
                   <div className="flex items-center justify-between text-slate-500 text-xs mb-1">
-                    <span>{lang === 'ar' ? 'استهلاك المياه (24 ساعة)' : 'Water Consumption (24h)'}</span>
+                    <span>{t('kpi_water', lang)}</span>
                     <Droplets className="w-4 h-4 text-sky-500" />
                   </div>
                   <div className="text-2xl font-bold text-slate-900">
@@ -616,7 +623,7 @@ export const App: React.FC = () => {
 
                 <div className="cs-card p-4 bg-teal-50/50 border-teal-200">
                   <div className="flex items-center justify-between text-teal-800 text-xs mb-1 font-semibold">
-                    <span>{lang === 'ar' ? 'الوفورات المحققة' : 'Verified Realized Savings'}</span>
+                    <span>{t('kpi_savings', lang)}</span>
                     <CheckCircle2 className="w-4 h-4 text-teal-600" />
                   </div>
                   <div className="text-2xl font-bold text-teal-700">
@@ -647,15 +654,13 @@ export const App: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-sm font-bold text-slate-900">
-                      {lang === 'ar' ? 'خريطة مواقع المباني في دبي' : 'Interactive Dubai Property Portfolio Map'}
+                      {t('map_title', lang)}
                     </h3>
                     <p className="text-xs text-slate-500">
-                      {lang === 'ar'
-                        ? 'انقر على أي مبنى في الخريطة لعرض القياسات الحية والملف التشغيلي'
-                        : 'Select any building marker to inspect telemetry, COP efficiency, and active incident dossiers.'}
+                      {t('map_subtitle', lang)}
                     </p>
                   </div>
-                  <span className="text-xs text-slate-500 font-mono">Dubai Coordinates (25.14°N, 55.22°E)</span>
+                  <span className="text-xs text-slate-500 font-mono">{t('map_coordinates', lang)}</span>
                 </div>
                 <DubaiMap
                   buildings={buildings}
@@ -685,7 +690,7 @@ export const App: React.FC = () => {
                       onClick={() => setInvestigationData(null)}
                       className="text-xs text-slate-400 hover:text-slate-600 font-bold px-2 py-1"
                     >
-                      ✕ Close
+                      ✕ {t('close', lang)}
                     </button>
                   </div>
                   <div className="text-xs text-slate-700 space-y-2">
@@ -703,13 +708,13 @@ export const App: React.FC = () => {
                         }}
                         className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded text-xs transition"
                       >
-                        Draft Maintenance Work Order
+                        {t('create_work_order', lang)}
                       </button>
                       <button
                         onClick={() => setInvestigationData(null)}
                         className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded text-xs transition"
                       >
-                        Dismiss
+                        {t('dismiss', lang)}
                       </button>
                     </div>
                   </div>
@@ -722,7 +727,7 @@ export const App: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       <AlertCircle className="w-4 h-4 text-red-500" />
-                      {lang === 'ar' ? 'أحدث التنبيهات والحوادث التشغيلية' : 'Detected Operational Anomalies'}
+                      {t('anomalies_card_title', lang)}
                     </h3>
                     <select
                       value={filterSeverity}
@@ -766,7 +771,7 @@ export const App: React.FC = () => {
                           }}
                           className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-300 text-slate-700 font-semibold rounded text-xs transition"
                         >
-                          Investigate
+                          {t('investigate', lang)}
                         </button>
                       </div>
                     ))}
@@ -777,7 +782,7 @@ export const App: React.FC = () => {
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       <Wrench className="w-4 h-4 text-teal-600" />
-                      {lang === 'ar' ? 'أوامر العمل المعلقة والموافقات' : 'Pending Work Orders & Approvals'}
+                      {t('workorders_card_title', lang)}
                     </h3>
                   </div>
                   <div className="space-y-2.5">
@@ -809,7 +814,7 @@ export const App: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-base font-bold text-slate-900">
-                    {lang === 'ar' ? 'القياسات الحية وفحص جودة البيانات' : 'Live Sensor Telemetry & Data Quality Gate'}
+                    {t('title_monitoring', lang)}
                   </h2>
                   <p className="text-xs text-slate-500">Continuous sub-meter streams with Layer A quality validation.</p>
                 </div>
@@ -887,7 +892,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'تحسين ذروة الطلب وتحويل الأحمال (الوحدة B)' : 'Energy-Grid & HVAC Optimization: Peak Load Shifting (Module B)'}
+                  {t('title_peak_demand', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Automated pre-cooling schedules and non-critical load shifting during the DEWA 12 PM - 6 PM peak tariff window.
@@ -950,8 +955,8 @@ export const App: React.FC = () => {
                             }`}
                           >
                             {activeRoleConfig.canAuthorizePeakShedding
-                              ? 'Approve Plan (FM)'
-                              : '🔒 Restricted to FM'}
+                              ? t('btn_approve_plan', lang)
+                              : `🔒 ${t('perm_badge_approvals_restricted', lang)}`}
                           </button>
                         )}
                         {plan.approval_status === 'Approved' && plan.execution_status !== 'Executed & Verified' && (
@@ -959,12 +964,12 @@ export const App: React.FC = () => {
                             onClick={() => handleExecutePlan(plan.plan_id)}
                             className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-teal-300 font-semibold text-xs transition"
                           >
-                            Execute Load Shedding
+                            {t('btn_execute_plan', lang)}
                           </button>
                         )}
                         {plan.execution_status === 'Executed & Verified' && (
                           <span className="px-3 py-1 rounded text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            Executed & Verified (133 kW Shed)
+                            {t('plan_executed_badge', lang)}
                           </span>
                         )}
                       </div>
@@ -980,7 +985,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'ذكاء الكربون وحسابات الاستدامة (الوحدة A)' : 'Autonomous Energy & ESG Carbon Accounting (Module A)'}
+                  {t('title_esg', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   GHG Protocol Corporate Accounting Standard | Transparent DEWA Grid Factor (0.42 kg CO₂e/kWh) | Strictly Separated Carbon Offsets
@@ -1037,7 +1042,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'معايير الراحة الحرارية وجودة الهواء الداخلي' : 'Indoor Comfort, Air Quality & Safety Interlocks'}
+                  {t('title_comfort_safety', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Non-negotiable life safety and comfort constraints complying with ASHRAE 55 and ASHRAE 62.1.
@@ -1121,7 +1126,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'الشمول الاجتماعي والمراكز المجتمعية (الوحدة C)' : 'Social Inclusion & Community Hub (Module C)'}
+                  {t('title_community', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Verified Dubai cooling shelters, customer happiness centres, health clinics, and privacy-preserving resident tickets.
@@ -1214,7 +1219,7 @@ export const App: React.FC = () => {
                     type="submit"
                     className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition"
                   >
-                    Submit Sanitized Service Ticket
+                    {t('btn_submit_request', lang)}
                   </button>
                 </form>
 
@@ -1242,7 +1247,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'التوعية وتحديات الاستدامة المجتمعية (الوحدة D)' : 'Sustainability Education & Community Participation Sprints (Module D)'}
+                  {t('title_education', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Multilingual education across 6 languages + Community energy & water conservation sprints.
@@ -1273,7 +1278,7 @@ export const App: React.FC = () => {
                           className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-1.5 transition"
                         >
                           <HeartHandshake className="w-3.5 h-3.5" />
-                          Pledge Participation
+                          {t('btn_pledge', lang)}
                         </button>
                       </div>
                     </div>
@@ -1307,7 +1312,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'المرونة المجتمعية والإنذار المبكر (الوحدة E)' : 'Community Resilience & Early Warning System (Module E)'}
+                  {t('title_resilience', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Integration with UAE National Center of Meteorology (NCM) & Dubai Municipality Air Quality Telemetry.
@@ -1354,7 +1359,7 @@ export const App: React.FC = () => {
                       onClick={() => setCurrentPage('community')}
                       className="text-xs text-teal-600 hover:text-teal-700 font-bold underline"
                     >
-                      View Map & Directions
+                      {t('btn_shelter_routing', lang)}
                     </button>
                   </div>
                 </div>
@@ -1367,7 +1372,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'سلسلة قرارات الذكاء الاصطناعي وجدول الأنشطة' : 'AI Reasoning & Transparent Operating Timeline'}
+                  {t('title_timeline', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Observe → Validate → Reason → Prioritize → Plan → Approve → Execute → Verify → Learn.
@@ -1400,7 +1405,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'مركز الموافقات البشرية والإجراءات الجوهرية' : 'Human Approval Centre (Consequential Action Gate)'}
+                  {t('title_approval', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Consequential physical interventions and peak load shedding strictly require human FM authorization.
@@ -1453,8 +1458,8 @@ export const App: React.FC = () => {
                           }`}
                         >
                           {activeRoleConfig.canApproveWorkOrders
-                            ? '✅ Authorize Work Order (FM)'
-                            : '🔒 Restricted to Facilities Manager'}
+                            ? `✅ ${t('btn_authorize_fm', lang)}`
+                            : `🔒 ${t('perm_badge_approvals_restricted', lang)}`}
                         </button>
                         <button
                           onClick={async () => {
@@ -1464,7 +1469,7 @@ export const App: React.FC = () => {
                           }}
                           className="px-4 py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs transition"
                         >
-                          Reject
+                          {t('btn_reject', lang)}
                         </button>
                       </div>
                     </div>
@@ -1473,7 +1478,7 @@ export const App: React.FC = () => {
                 {workOrders.filter((w) => w.approval_status === 'Pending').length === 0 && (
                   <div className="cs-card p-8 text-center text-xs text-slate-500">
                     <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto mb-2" />
-                    All operational work orders have been reviewed. No pending gates.
+                    {t('no_pending_approvals', lang)}
                   </div>
                 )}
               </div>
@@ -1485,7 +1490,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'محرك الأتمتة البصري n8n وصحة المهام' : 'n8n Visual Workflow Automation Engine & Execution Health'}
+                  {t('title_n8n_health', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Self-hosted n8n orchestrator executing 9 autonomous event-driven and scheduled building workflows.
@@ -1521,7 +1526,7 @@ export const App: React.FC = () => {
                             onClick={() => handleTriggerWorkflow(wf.id)}
                             className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-teal-300 font-semibold text-[11px]"
                           >
-                            Trigger
+                            {t('trigger_test', lang)}
                           </button>
                         </td>
                       </tr>
@@ -1537,7 +1542,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'التقارير وسجلات التدقيق القابلة للتنزيل' : 'Reports & Auditable Deliverables'}
+                  {t('title_reports', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   Download official corporate ESG compliance JSON and tamper-evident audit CSV files.
@@ -1564,7 +1569,7 @@ export const App: React.FC = () => {
                     className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs flex items-center gap-2 transition"
                   >
                     <Download className="w-4 h-4" />
-                    Download Official ESG JSON
+                    {t('btn_download_esg', lang)}
                   </button>
                 </div>
 
@@ -1588,7 +1593,7 @@ export const App: React.FC = () => {
                     className="px-4 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center gap-2 transition"
                   >
                     <Download className="w-4 h-4" />
-                    Download Audit CSV Ledger
+                    {t('btn_download_audit_csv', lang)}
                   </button>
                 </div>
               </div>
@@ -1600,7 +1605,7 @@ export const App: React.FC = () => {
             <div className="space-y-6">
               <div>
                 <h2 className="text-base font-bold text-slate-900">
-                  {lang === 'ar' ? 'التكاملات والطيار ومصفوفة أمان الـ 19 أداة' : 'Integrations, Customer Pilots & Agent 19 Typed Tools Manifest'}
+                  {t('title_integrations', lang)}
                 </h2>
                 <p className="text-xs text-slate-500">
                   BMS gateways, prospective customer validation agreements, and typed tool risk classifications.
